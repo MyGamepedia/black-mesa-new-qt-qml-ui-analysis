@@ -1,0 +1,39 @@
+{
+    "author": "HECU Collective",
+    "url": "https://www.moddb.com/mods/black-mesa-blue-shift-remake",
+    "title": "#BSHIFT_CampaignName_BMSCP1",
+    "description": "Relive the Black Mesa Incident from Barney Calhoun's perspective!",
+    "imageSource": "image://game/ui/bs_campaign/logo/bs_logo.png",
+    "chapters": [
+        {
+            "title": "#BSHIFT_Chapter1_Title",
+            "description": "",
+            "imageSource": "image://game/ui/bs_campaign/images/chapter1",
+            "levelName": "bs_c0m0a"
+        },
+        {
+            "title": "#BSHIFT_Chapter2_Title",
+            "description": "",
+            "imageSource": "image://game/ui/bs_campaign/images/chapter2",
+            "levelName": "bs_c1m0a"
+        },
+        {
+            "title": "#BSHIFT_Chapter3_Title",
+            "description": "",
+            "imageSource": "image://game/ui/bs_campaign/images/chapter3",
+            "levelName": "bs_c2m0a"
+        },
+		{
+            "title": "#BSHIFT_Chapter4_Title",
+            "description": "",
+            "imageSource": "image://game/ui/bs_campaign/images/chapter4",
+            "levelName": "bs_c3m0a"
+        },
+		{
+            "title": "#BSHIFT_Chapter5_Title",
+            "description": "",
+            "imageSource": "image://game/ui/bs_campaign/images/chapter5",
+            "levelName": "bs_c4m0a"
+        }
+    ]
+}

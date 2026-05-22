@@ -1,0 +1,44 @@
+singleton L10n 1.0						l10n_bs.qml
+singleton Theme 1.0						theme.qml
+singleton Sound 1.0						sound.qml
+singleton BlackMesaUtils 1.0			utils.qml
+singleton InputBindingsManager 1.0		input-bindings-manager.qml
+singleton Routes 1.0					routes.qml
+
+TriangleButton 1.0						button-triangle.qml
+CarouselButton 1.0						button-carouselnav.qml
+CTAButton 1.0							button-cta.qml
+DefaultButton 1.0						button-default.qml
+BSButton 1.0							button-bs.qml
+BSLetterboxButton 1.0					button-bsletterbox.qml
+WarningButton 1.0						button-warning.qml
+LetterboxButton 1.0						button-letterbox.qml
+MainNavButton 1.0						button-mainnav.qml
+IconButton 1.0							button-bsicon.qml
+
+DevConsole 1.0							component-devconsole.qml
+
+Carousel 1.0							component-carousel.qml
+CarouselItem 1.0						component-carousel-item.qml
+CarouselSavesItem 1.0					component-carousel-item-saves.qml
+CarouselNewGameItem 1.0					component-carousel-item-newgame.qml
+CarouselLoadGameItem 1.0				component-carousel-item-loadgame.qml
+
+Wallpaper 1.0							component-wallpaper.qml
+
+Footer 1.0								component-footer.qml
+
+Route 1.0								route.qml
+Router 1.0								router.qml
+RouteView 1.0							routeview.qml
+
+Alert 1.0								component-alert.qml
+OptionsList 1.0							component-optionslist.qml
+OptionsListRow 1.0						component-optionslist-row.qml
+OtherList 1.0							component-otherlist.qml
+OtherListRow 1.0						component-otherlist-row.qml
+VerticalScrollBar 1.0					component-scrollbar-vertical.qml
+BindingList 1.0							component-binding.qml
+BindingCell 1.0							component-optionslist-input-bindingcell.qml
+
+Hint 1.0								component-subhint.qml
