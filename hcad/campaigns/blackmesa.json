@@ -1,0 +1,33 @@
+{
+    "author": "HECU Team, restored by MyGamepedia",
+    "url": "https://www.moddb.com/mods/black-mesa-black-ops",
+    "title": "#BMS_CampaignName_BMSCP1",
+    "description": "",
+    "imageSource": "image://game/ui/images/logo.jpg",
+    "chapters": [
+        {
+            "title": "#BMS_Chapter1_Title",
+            "description": "",
+            "imageSource": "image://game/ui/campaign/images/chapter1.png",
+            "levelName": "hc_t0a0"
+        },
+        {
+            "title": "#BMS_Chapter2_Title",
+            "description": "",
+            "imageSource": "image://game/ui/campaign/images/chapter2.png",
+            "levelName": "hc_t0a0a"
+        },
+        {
+            "title": "#BMS_Chapter3_Title",
+            "description": "",
+            "imageSource": "image://game/ui/campaign/images/chapter3.png",
+            "levelName": "hc_t0a2"
+        },
+        {
+            "title": "#BMS_Chapter4_Title",
+            "description": "",
+            "imageSource": "image://game/ui/campaign/images/chapter4.png",
+            "levelName": "hc_t0a3"
+        }
+    ]
+}
