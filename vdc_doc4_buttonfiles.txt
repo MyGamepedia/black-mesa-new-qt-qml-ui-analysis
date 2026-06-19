@@ -1,0 +1,1148 @@
+{{bms topicon}}
+{{TabsBar|main=Black Mesa Qt UI}}
+This page contains information about button prefix QML {{bms|4}} files and their code from Resonance Decade Update.
+
+===button-carouselnav.qml===  
+  
+{{code|button-carouselnav.qml}} implements the left and right pagination arrow buttons used in the carousel component. It is registered in {{code|qmldir}} as {{code|CarouselButton 1.0}} and is used exclusively by {{code|component-carousel.qml}}.  
+  
+====Registration====  
+  
+{| class="standard-table"  
+! QML type name
+! Version 
+! Source file  
+! Base type 
+|-   
+| {{code|CarouselButton}}  
+| {{code|1.0}}  
+| {{code|button-carouselnav.qml}}    
+| {{code|MouseArea}}  
+|- 
+|}  
+  
+====Properties====  
+  
+{| class="standard-table"  
+! Property  
+! Type  
+! Default  
+! Description  
+|-  
+| {{code|direction}}  
+| {{code|string}}  
+| {{code|"left"}}  
+| Controls which chevron image is displayed. Accepts {{code|"left"}} or {{code|"right"}}; any other value falls through to the right chevron.  
+|-  
+| {{code|scale}}  
+| {{code|alias}} → <code><nowiki>image.scale</nowiki></code>  
+| (inherited)  
+| Exposes the inner {{code|Image}} scale for external manipulation. No consumer sets this property.  
+|-  
+| {{code|buttonHeight}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(214 * Theme.widthScale)</nowiki></code>  
+| Computed height of the hit area. Uses {{code|Theme.widthScale}} rather than {{code|Theme.heightScale}}.  
+|-  
+| {{code|buttonWidth}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(100 * Theme.widthScale)</nowiki></code>  
+| Computed width of the hit area.  
+|}  
+  
+The root {{code|MouseArea}} sets {{code|height: buttonHeight}}, {{code|width: buttonWidth}}, and {{code|hoverEnabled: true}}.  
+  
+====States====  
+  
+The component starts in the {{code|"blurred"}} state. Both states target the inner {{code|Image}} item (id: {{code|image}}).  
+  
+{| class="standard-table"  
+! State  
+! Effect  
+|-  
+| {{code|blurred}}  
+| <code><nowiki>image.opacity = 0.5</nowiki></code>  
+|-  
+| {{code|focused}}  
+| <code><nowiki>image.opacity = 1.0</nowiki></code>  
+|}  
+  
+====Transitions====  
+  
+Both {{code|blurred}} → {{code|focused}} and {{code|focused}} → {{code|blurred}} animate {{code|image.opacity}} over 150 ms using a {{code|NumberAnimation}} wrapped inside a {{code|ParallelAnimation}}. The {{code|ParallelAnimation}} wrapper contains only a single child animation and is therefore redundant.  
+  
+====Event Handlers====  
+  
+{| class="standard-table"  
+! Handler  
+! Action  
+|-  
+| {{code|onEntered}}  
+| Sets state to {{code|"focused"}}; plays {{code|Theme.sounds.buttonFocused}} ({{code|common/launch_glow1.wav}}).  
+|-  
+| {{code|onExited}}  
+| Sets state to {{code|"blurred"}}.  
+|-  
+| {{code|onReleased}}  
+| Plays {{code|Theme.sounds.buttonClicked}} ({{code|bms_objects/clickbeep/beep1.wav}}).  
+|}  
+  
+Note that the click sound is triggered on {{code|onReleased}}, not {{code|onClicked}}. This means the sound fires even if the pointer is released outside the button's bounds after being pressed inside it.  
+  
+====Image Child====  
+  
+The sole visual child is an {{code|Image}} (id: {{code|image}}) centered in the hit area via <code><nowiki>anchors.centerIn: parent</nowiki></code>.  
+  
+{| class="standard-table"  
+! Property  
+! Value  
+|-  
+| {{code|source}}  
+| <code><nowiki>direction === "left" ? "image://game/ui/images/chevron-left.png" : "image://game/ui/images/chevron-right.png"</nowiki></code>  
+|-  
+| {{code|height}}  
+| <code><nowiki>Math.ceil(sourceSize.height * Theme.widthScale)</nowiki></code>  
+|-  
+| {{code|width}}  
+| <code><nowiki>Math.ceil(sourceSize.width * Theme.widthScale)</nowiki></code>  
+|-  
+| {{code|fillMode}}  
+| {{code|Image.PreserveAspectFit}}  
+|}  
+  
+Both image dimensions are scaled by {{code|Theme.widthScale}}. The height dimension does not use {{code|Theme.heightScale}}, which is inconsistent with the scaling convention used by most other UI components.  
+  
+====Usage in component-carousel.qml====  
+  
+{{code|component-carousel.qml}} instantiates two {{code|CarouselButton}} items — one on each side of the clipping mask (id: {{code|mask}}).  
+  
+{| class="standard-table"  
+! Instance  
+! {{code|direction}}  
+! Anchor  
+! Visibility condition  
+! Click action  
+|-  
+| Left button  
+| {{code|"left"}}  
+| <code><nowiki>anchors.right: mask.left</nowiki></code>  
+| <code><nowiki>showLeft</nowiki></code>  
+| <code><nowiki>changePagination(-1)</nowiki></code>  
+|-  
+| Right button  
+| {{code|"right"}}  
+| <code><nowiki>anchors.left: mask.right</nowiki></code>  
+| <code><nowiki>showRight</nowiki></code>  
+| <code><nowiki>changePagination(1)</nowiki></code>  
+|}  
+  
+Each instance is hidden and disabled when its corresponding direction has no more items: <code><nowiki>enabled: showLeft</nowiki></code> / <code><nowiki>opacity: showLeft ? 1.0 : 0.0</nowiki></code>. The opacity fade is handled externally by a {{code|Behavior on opacity}} in the parent, independent of the internal state-based opacity on the image. This creates two stacked opacity layers: the button-level fade (parent-controlled) and the image-level hover fade (state-controlled).  
+  
+====Technical Notes====  
+  
+1. '''{{code|buttonHeight}} uses {{code|Theme.widthScale}}.''' The height dimension is computed as <code><nowiki>Math.ceil(214 * Theme.widthScale)</nowiki></code> rather than <code><nowiki>Math.ceil(214 * Theme.heightScale)</nowiki></code>. On non-16:9 displays where {{code|widthScale}} and {{code|heightScale}} differ, the button hit area will not scale correctly in the vertical axis.  
+  
+2. '''Image height also uses {{code|Theme.widthScale}}.''' The inner {{code|Image}} height is <code><nowiki>Math.ceil(sourceSize.height * Theme.widthScale)</nowiki></code>. Combined with {{code|fillMode: Image.PreserveAspectFit}}, the image will not be distorted, but the computed height value passed to the layout engine is incorrect on non-16:9 displays.  
+  
+3. '''{{code|scale}} alias is dead code.''' The {{code|scale}} property is aliased to {{code|image.scale}} and exposed as a public API, but no consumer in the codebase sets it. It is likely a leftover from an earlier design.  
+  
+4. '''{{code|ParallelAnimation}} wraps a single child.''' Both transitions use a {{code|ParallelAnimation}} containing exactly one {{code|NumberAnimation}}. The parallel wrapper provides no benefit and adds unnecessary nesting.  
+  
+5. '''{{code|onReleased}} vs {{code|onClicked}} for sound.''' The click sound is played in {{code|onReleased}} rather than {{code|onClicked}}. {{code|onClicked}} fires only when the press and release both occur within the {{code|MouseArea}}; {{code|onReleased}} fires unconditionally on any release. This is inconsistent with {{code|button-default.qml}} and {{code|button-letterbox.qml}}, which use {{code|onClicked}}.  
+  
+6. '''No {{code|objectName}}.''' Unlike {{code|DefaultButton}} ({{code|objectName: "ui:btn:action[...]"}}) and {{code|LetterboxButton}}, {{code|CarouselButton}} has no {{code|objectName}}. The {{code|BlackMesaUtils.traverseUIElements}} traversal called after carousel pagination in {{code|component-carousel.qml}} will not identify these buttons by name.  
+  
+7. '''No {{code|disabled}} property.''' The button has no internal disabled state. Disabling is handled entirely by the parent setting {{code|enabled: false}}, which suppresses all {{code|MouseArea}} events but does not change the visual appearance beyond the parent-controlled opacity fade.  
+  
+8. '''{{code|id: carouselButton}} is unused internally.''' The root id is declared but never referenced by any child element or internal binding within the file.  
+
+===button-cta.qml===  
+  
+{{code|button-cta.qml}} implements the '''Call-to-Action''' (CTA) button variant used throughout the UI. It is a minimal subclass of {{code|DefaultButton}} that overrides three properties to produce a visually distinct primary-action button. Registered in {{code|qmldir}} as {{code|CTAButton 1.0}}.  
+  
+====Inheritance====  
+  
+{| class="standard-table"  
+! Base class !! File  
+|-  
+| {{code|DefaultButton}} || {{code|button-default.qml}}  
+|}  
+  
+{{code|CTAButton}} does not define any new properties, signals, functions, or child items. It consists entirely of three property overrides on {{code|DefaultButton}}.  
+  
+====Property Overrides====  
+  
+{| class="standard-table"  
+! Property !! CTAButton value !! DefaultButton default !! Resolved value  
+|-  
+| {{code|bold}} || {{code|true}} || {{code|false}} || Uses {{code|Theme.fonts.bold}} (NotoSans Bold / NotoSansCJK Bold) instead of {{code|Theme.fonts.regular}}  
+|-  
+| {{code|boxColor}} || <code><nowiki>Theme.colors.highlight</nowiki></code> || <code><nowiki>Theme.colors.buttonText</nowiki></code> || {{code|#e47125}} (orange) instead of {{code|white}}  
+|-  
+| {{code|focusedTextColor}} || <code><nowiki>Theme.colors.buttonText</nowiki></code> || <code><nowiki>Theme.colors.highlight</nowiki></code> || {{code|white}} instead of {{code|#e47125}} (orange)  
+|}  
+  
+The net effect is an inversion of the DefaultButton color scheme: where {{code|DefaultButton}} uses a white border/fill with orange focused text, {{code|CTAButton}} uses an orange border/fill with white focused text.  
+  
+====Effective Visual States====  
+  
+All state logic is inherited from {{code|DefaultButton}}. The overridden properties change the resolved colors as follows:  
+  
+{| class="standard-table"  
+! State !! Border color !! {{code|focusShape}} fill !! Text color !! {{code|focusShape}} height  
+|-  
+| {{code|blurred}} || {{code|#e47125}} || {{code|#e47125}} || {{code|white}} || <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code> (bottom bar only)  
+|-  
+| {{code|focused}} || {{code|#e47125}} || {{code|#e47125}} || {{code|white}} || Full button height (solid orange fill)  
+|-  
+| {{code|disabled}} || {{code|#888888}} || {{code|#888888}} || {{code|#888888}} || <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code> (bottom bar only)  
+|}  
+  
+In the {{code|blurred}} state the button appears as an orange-bordered rectangle with a thin orange bottom bar and white text. In the {{code|focused}} state the entire button fills with orange and the text remains white. The {{code|disabled}} state is identical to {{code|DefaultButton}}: all elements use {{code|Theme.colors.dimmedText}} ({{code|#888888}}).  
+  
+The {{code|blurredTextColor}} property is not overridden, so blurred text color remains {{code|Theme.colors.buttonText}} ({{code|white}}), which is the same as {{code|focusedTextColor}}. Text color does not change between blurred and focused states in {{code|CTAButton}}.  
+  
+====Consumers====  
+  
+{| class="standard-table"  
+! File !! Instances !! Button labels ({{code|L10n}} key)  
+|-  
+| {{code|routeview-index.qml}} || 5 || {{code|buttons.quicksave}}, {{code|buttons.saveGame}}, {{code|buttons.disconnect}} (in-game variant); {{code|buttons.startGame}} (new-game variant); {{code|buttons.resume}} (continue variant)  
+|-  
+| {{code|routeview-bindings.qml}} || 4 || Apply Changes, Discard Changes, and binding-related actions  
+|-  
+| {{code|component-optionslist.qml}} || 2 || {{code|buttons.applyChanges}} (primary apply); secondary action  
+|-  
+| {{code|routeview-audio.qml}} || 2 || Apply/Discard Changes  
+|-  
+| {{code|routeview-savebeforequit.qml}} || 2 || {{code|buttons.cancel}}, {{code|buttons.dontSave}}  
+|-  
+| {{code|routeview-video.qml}} || 2 || Apply/Discard Changes  
+|-  
+| {{code|routeview-host.qml}} || 1 || Start Server action  
+|-  
+| {{code|routeview-quit.qml}} || 1 || {{code|buttons.quit}}  
+|}  
+  
+====Notable Observations====  
+  
+1. '''{{code|focusedTextColor}} override is redundant.''' {{code|DefaultButton}} sets <code><nowiki>focusedTextColor: Theme.colors.highlight</nowiki></code> (orange). {{code|CTAButton}} overrides it to <code><nowiki>Theme.colors.buttonText</nowiki></code> (white). However, since {{code|blurredTextColor}} is also white and text color does not animate between blurred and focused states in {{code|CTAButton}}, the override has no visible effect — the text is white in both states regardless. The override is nonetheless necessary to prevent orange text from appearing on the orange {{code|focusShape}} fill during the focused state.  
+  
+2. '''Semantic inversion in quit/save-before-quit dialogs.''' In {{code|routeview-quit.qml}}, {{code|CTAButton}} is used for the destructive "Quit" action and {{code|DefaultButton}} for the safe "Cancel" action. In {{code|routeview-savebeforequit.qml}}, {{code|CTAButton}} is used for "Cancel" and "Don't Save" while {{code|DefaultButton}} is used for "Save". The CTA styling (orange, bold) does not consistently indicate a constructive or safe action — it marks the contextually primary action, which may be destructive.  
+  
+3. '''The file is 8 lines including imports.''' The entire implementation is three property assignments. All layout, animation, state, and interaction logic is inherited from {{code|DefaultButton}} without modification.  
+  
+4. '''No {{code|objectName}} is set at the type level.''' Individual instances set {{code|objectName}} (e.g. {{code|"ui:btn:action[apply]"}}, {{code|"ui:btn:action[cancel]"}}) at the call site. The type itself provides no default {{code|objectName}}, consistent with {{code|DefaultButton}} and {{code|WarningButton}}.  
+  
+5. '''{{code|bold: true}} is the only typographic override.''' All font size, capitalization ({{code|Font.AllUppercase}}), and family fallback logic remain in {{code|DefaultButton}}. The bold weight is the only typographic distinction between {{code|CTAButton}} and an unstyled {{code|DefaultButton}}.
+
+===button-default.qml===  
+  
+{{code|button-default.qml}} is the base button component for the UI. It is registered as {{code|DefaultButton 1.0}} and serves as the supertype for {{code|CTAButton}} and {{code|WarningButton}}. All three types are used throughout the UI wherever a labelled action button is required.  
+  
+====Registration====  
+  
+{| class="standard-table"  
+! qmldir name !! Version !! File  
+|-  
+| {{code|DefaultButton}} || {{code|1.0}} || {{code|button-default.qml}}  
+|-  
+| {{code|CTAButton}} || {{code|1.0}} || {{code|button-cta.qml}}  
+|-  
+| {{code|WarningButton}} || {{code|1.0}} || {{code|button-warning.qml}}  
+|}  
+  
+====Root Element====  
+  
+The root element is a {{code|MouseArea}} (id: {{code|button}}). This is the outer interactive surface. A second, nested {{code|MouseArea}} (id: {{code|mouseArea}}) is declared inside it to own the state machine and hover/click handlers. The outer {{code|MouseArea}} handles only {{code|onDisabledChanged}} and provides {{code|propagateComposedEvents: true}} so that click events can reach parent items.  
+  
+====Properties====  
+  
+=====Appearance=====  
+  
+{| class="standard-table"  
+! Property !! Type !! Default !! Notes  
+|-  
+| {{code|text}} || {{code|string}} || {{code|"DEFAULT TEXT"}} || Displayed label; always rendered {{code|Font.AllUppercase}}.  
+|-  
+| {{code|bold}} || {{code|bool}} || {{code|false}} || Selects {{code|Theme.fonts.bold}} vs {{code|Theme.fonts.regular}}.  
+|-  
+| {{code|boxColor}} || {{code|color}} || {{code|Theme.colors.buttonText}} (white) || Color of the border rectangle and the {{code|focusShape}} fill.  
+|-  
+| {{code|disabledBoxColor}} || {{code|color}} || {{code|Theme.colors.dimmedText}} (#888888) || {{code|boxColor}} override when disabled.  
+|-  
+| {{code|blurredTextColor}} || {{code|color}} || {{code|Theme.colors.buttonText}} (white) || Text color in the {{code|blurred}} state.  
+|-  
+| {{code|focusedTextColor}} || {{code|color}} || {{code|Theme.colors.highlight}} (#e47125) || Text color in the {{code|focused}} state.  
+|-  
+| {{code|disabledTextColor}} || {{code|color}} || {{code|Theme.colors.dimmedText}} (#888888) || Text color in the {{code|disabled}} state.  
+|}  
+  
+=====Dimensions=====  
+  
+{| class="standard-table"  
+! Property !! Type !! Default  
+|-  
+| {{code|buttonHeight}} || {{code|int}} || <code><nowiki>Math.ceil(46 * Theme.heightScale)</nowiki></code>  
+|-  
+| {{code|buttonWidth}} || {{code|int}} || <code><nowiki>Math.ceil(buttonText.contentWidth + 46 * Theme.heightScale)</nowiki></code>  
+|-  
+| {{code|borderWidth}} || {{code|int}} || <code><nowiki>Math.ceil(2 * Theme.widthScale)</nowiki></code>  
+|-  
+| {{code|fontSize}} || {{code|int}} || <code><nowiki>Math.ceil(16 * Theme.heightScale)</nowiki></code>  
+|-  
+| {{code|focusShapeHeightBlurred}} || {{code|int}} || <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code>  
+|-  
+| {{code|buttonTextVerticalCenterOffsetBlurred}} || {{code|int}} || <code><nowiki>Math.ceil(-4 * Theme.heightScale)</nowiki></code>  
+|}  
+  
+=====Behaviour=====  
+  
+{| class="standard-table"  
+! Property !! Type !! Default !! Notes  
+|-  
+| {{code|disabled}} || {{code|bool}} || {{code|false}} || Suppresses hover/click and applies disabled styling.  
+|-  
+| {{code|clickedSoundPath}} || {{code|string}} || {{code|Theme.sounds.buttonClicked}} || {{code|"bms_objects/clickbeep/beep1.wav"}}  
+|-  
+| {{code|focusedSoundPath}} || {{code|string}} || {{code|Theme.sounds.buttonFocused}} || {{code|"common/launch_glow1.wav"}}  
+|}  
+  
+====Visual Structure====  
+  
+Three child items are declared directly under the outer {{code|MouseArea}}:  
+  
+; {{code|border}} ({{code|Rectangle}})  
+: Fills the parent. Transparent fill; colored border of width {{code|borderWidth}} using {{code|boxColor}}. Has a standalone <code><nowiki>Behavior on border.color</nowiki></code> ({{code|ColorAnimation}}, 150 ms) that runs independently of the state machine.  
+  
+; {{code|focusShape}} ({{code|Rectangle}})  
+: Anchored to the bottom, left, and right of the parent. Its {{code|height}} animates between {{code|focusShapeHeightBlurred}} (8 px scaled, blurred/disabled) and {{code|parent.height}} (full fill, focused). Color is {{code|boxColor}} or {{code|disabledBoxColor}}. This produces the "fill from bottom" hover effect.  
+  
+; {{code|buttonText}} ({{code|Text}})  
+: Centered in the parent. Text is {{code|Font.AllUppercase}}. In the {{code|blurred}} state its {{code|anchors.verticalCenterOffset}} is set to {{code|buttonTextVerticalCenterOffsetBlurred}} (−4 px scaled), shifting it slightly upward above the {{code|focusShape}} underline. On focus the offset returns to {{code|0}}.  
+  
+====State Machine====  
+  
+The state machine is owned by the inner {{code|mouseArea}}. Its initial state is <code><nowiki>button.disabled ? "disabled" : "blurred"</nowiki></code>.  
+  
+{| class="standard-table"  
+! State !! {{code|focusShape}} height !! {{code|focusShape}} color !! Text color !! Text vertical offset !! Side effect  
+|-  
+| {{code|blurred}} || {{code|focusShapeHeightBlurred}} || {{code|boxColor}} || {{code|blurredTextColor}} || {{code|buttonTextVerticalCenterOffsetBlurred}} || —  
+|-  
+| {{code|focused}} || {{code|parent.height}} || {{code|boxColor}} || {{code|focusedTextColor}} || {{code|0}} || Plays {{code|focusedSoundPath}} via {{code|StateChangeScript}}  
+|-  
+| {{code|disabled}} || {{code|focusShapeHeightBlurred}} || {{code|disabledBoxColor}} || {{code|disabledTextColor}} || {{code|buttonTextVerticalCenterOffsetBlurred}} || —  
+|}  
+  
+=====Transitions=====  
+  
+{| class="standard-table"  
+! From !! To !! Reversible !! Animated properties !! Easing  
+|-  
+| {{code|blurred}} || {{code|focused}} || Yes || Text color, {{code|focusShape}} height, text {{code|verticalCenterOffset}} || {{code|Easing.OutQuint}}, 150 ms  
+|-  
+| {{code|blurred}} || {{code|disabled}} || Yes || Text color, {{code|focusShape}} color || Linear, 150 ms  
+|-  
+| {{code|focused}} || {{code|disabled}} || Yes || Text color, {{code|focusShape}} color, {{code|focusShape}} height, text {{code|verticalCenterOffset}} || {{code|Easing.OutQuint}}, 150 ms  
+|}  
+  
+There is no explicit {{code|focused}} → {{code|blurred}} transition entry; the {{code|blurred}} → {{code|focused}} transition covers the reverse direction via {{code|reversible: true}}.  
+  
+====Event Handlers====  
+  
+=====Inner {{code|mouseArea}}=====  
+  
+; {{code|onEntered}}  
+: If state is not {{code|"disabled"}}, sets state to {{code|"focused"}}.  
+  
+; {{code|onExited}}  
+: If state is not {{code|"disabled"}}, sets state to {{code|"blurred"}}.  
+  
+; {{code|onClicked}}  
+: If not disabled, plays {{code|button.clickedSoundPath}} and sets <code><nowiki>mouse.accepted = false</nowiki></code> (propagates the event). If disabled, sets <code><nowiki>mouse.accepted = true</nowiki></code> inside the {{code|else}} branch, but this is immediately overwritten by the unconditional <code><nowiki>mouse.accepted = false</nowiki></code> on the next line. See [[#Known Issues and Observations|Known Issues]].  
+  
+=====Outer {{code|button}}=====  
+  
+; {{code|onDisabledChanged}}  
+: Directly sets {{code|mouseArea.state}}. If {{code|disabled}} is {{code|true}}, forces state to {{code|"disabled"}}. Otherwise, checks {{code|button.containsMouse}} to decide between {{code|"focused"}} and {{code|"blurred"}}.  
+  
+====Subclasses====  
+  
+Both subclasses override three properties and add no new logic.  
+  
+{| class="standard-table"  
+! Type !! {{code|bold}} !! {{code|boxColor}} !! {{code|focusedTextColor}} !! Semantic use  
+|-  
+| {{code|CTAButton}} || {{code|true}} || {{code|Theme.colors.highlight}} (#e47125) || {{code|Theme.colors.buttonText}} (white) || Primary / call-to-action  
+|-  
+| {{code|WarningButton}} || {{code|true}} || {{code|Theme.colors.warning}} (#c72424) || {{code|Theme.colors.buttonText}} (white) || Destructive actions  
+|}  
+  
+====Usage====  
+  
+{{code|DefaultButton}}, {{code|CTAButton}}, and {{code|WarningButton}} are used in {{code|Alert}} {{code|buttons}} models and in {{code|OptionsList}} footers throughout the UI. Representative usages:  
+  
+{| class="standard-table"  
+! File !! Type used !! Context  
+|-  
+| {{code|routeview-quit.qml}} || {{code|CTAButton}}, {{code|DefaultButton}} || Quit confirmation dialog (Quit / Cancel)  
+|-  
+| {{code|routeview-savebeforequit.qml}} || {{code|CTAButton}}, {{code|DefaultButton}} || Save-before-quit dialog (Cancel / Don't Save / Save)  
+|-  
+| {{code|component-optionslist.qml}} || {{code|WarningButton}}, {{code|CTAButton}} || Batch-update footer (Discard Changes / Apply Changes)  
+|-  
+| {{code|routeview-index.qml}} || {{code|CTAButton}} || In-game index: Quicksave, Save Game, Resume, New Game  
+|-  
+| {{code|routeview-savegame.qml}} || {{code|CTAButton}}, {{code|WarningButton}} || Save game / delete save confirmation  
+|-  
+| {{code|routeview-loadgame.qml}} || {{code|WarningButton}} || Delete save confirmation  
+|-  
+| {{code|routeview-audio.qml}} || {{code|CTAButton}}, {{code|WarningButton}} || Audio options apply / reset defaults  
+|-  
+| {{code|routeview-video.qml}} || {{code|CTAButton}}, {{code|WarningButton}} || Video options apply / reset defaults  
+|-  
+| {{code|routeview-bindings.qml}} || {{code|CTAButton}}, {{code|WarningButton}}, {{code|DefaultButton}} || Bindings page: Edit Binding, Clear Binding, Reset All Defaults  
+|-  
+| {{code|routeview-host.qml}} || {{code|CTAButton}} || Host game start button  
+|}  
+  
+All instances set {{code|objectName}} to a string of the form <code><nowiki>"ui:btn:action[<role>]"</nowiki></code> (e.g. {{code|"ui:btn:action[apply]"}}, {{code|"ui:btn:action[cancel]"}}, {{code|"ui:btn:action[discard]"}}). This naming convention is consumed by {{code|utils.qml}} during UI traversal for keyboard/controller navigation.  
+  
+====Known Issues and Observations====  
+  
+1. '''Disabled click suppression is broken.''' The {{code|onClicked}} handler sets <code><nowiki>mouse.accepted = true</nowiki></code> inside the {{code|else}} (disabled) branch, but the unconditional <code><nowiki>mouse.accepted = false</nowiki></code> immediately following overwrites it. Clicks always propagate to parent items regardless of the {{code|disabled}} state.  
+  
+2. '''{{code|buttonWidth}} uses {{code|heightScale}} for horizontal padding.''' The formula is <code><nowiki>Math.ceil(buttonText.contentWidth + 46 * Theme.heightScale)</nowiki></code>. The 46-pixel padding is scaled by {{code|heightScale}} rather than {{code|widthScale}}, making the button narrower than expected on displays where the two scale factors differ (non-16:9 resolutions). {{code|borderWidth}} correctly uses {{code|widthScale}}.  
+  
+3. '''Nested {{code|MouseArea}} pattern.''' The root element is itself a {{code|MouseArea}} ({{code|button}}), and a second {{code|MouseArea}} ({{code|mouseArea}}) is nested inside it. The outer area serves only as a container and {{code|onDisabledChanged}} handler; all interactive logic lives in the inner area. This is an unusual pattern that could cause unexpected event routing if the outer area's own {{code|onClicked}} were ever connected.  
+  
+4. '''{{code|StateChangeScript}} fires on programmatic state changes.''' The {{code|focusedScript}} in the {{code|focused}} state plays the hover sound whenever the state becomes {{code|"focused"}}, including when {{code|onDisabledChanged}} programmatically sets {{code|mouseArea.state [[=]] "focused"}} because the cursor happens to be over the button at the moment it is re-enabled.  
+  
+5. '''{{code|Behavior on border.color}} is independent of the state machine.''' The {{code|border}} rectangle has a standalone {{code|Behavior}} that animates its {{code|border.color}} over 150 ms. The state machine also sets {{code|border.color}} via {{code|PropertyChanges}}. Both mechanisms run concurrently, which can cause the border color to animate twice or produce a double-transition artifact when states change rapidly.  
+  
+6. '''No {{code|objectName}} on the root element.''' Unlike most interactive components in the codebase (e.g. {{code|component-carousel-item.qml}} with {{code|objectName: "ui:carousel-item"}}), {{code|button-default.qml}} does not set an {{code|objectName}} on the root. Individual instances set their own {{code|objectName}} values (e.g. {{code|"ui:btn:action[apply]"}}), so the base type is not independently identifiable during UI traversal.
+
+===button-letterbox.qml===  
+  
+{{code|button-letterbox.qml}} implements the letterbox-style navigation button used throughout the Black Mesa main menu. It is registered in {{code|qmldir}} as {{code|LetterboxButton 1.0}} and is the base type for {{code|MainNavButton}} ({{code|button-mainnav.qml}}). Direct consumers include {{code|component-footer.qml}}, {{code|component-header.qml}} (sub-nav delegate), and {{code|routeview-translators.qml}}.  
+  
+====Root Element====  
+  
+The root element is a {{code|MouseArea}} (id: {{code|button}}). This is an unusual choice — most button components in the codebase use {{code|Item}} or {{code|FocusScope}} as the root. The outer {{code|MouseArea}} does not handle mouse events directly; it exists to expose the {{code|containsMouse}} property used in {{code|onSelectedChanged}} and {{code|onDisabledChanged}}, and to serve as the QML type root that consumers attach {{code|onClicked}} handlers to. All actual mouse event handling is delegated to an inner {{code|MouseArea}} (id: {{code|mouseArea}}).  
+  
+====Properties====  
+  
+{| class="standard-table"  
+! Property  
+! Type  
+! Default  
+! Description  
+|-  
+| {{code|text}}  
+| {{code|alias}}  
+| —  
+| Alias to {{code|buttonText.text}}. Consumers set this to the button label.  
+|-  
+| {{code|selected}}  
+| {{code|bool}}  
+| {{code|false}}  
+| Whether the button is in the selected (active route) state.  
+|-  
+| {{code|disabled}}  
+| {{code|bool}}  
+| {{code|false}}  
+| Disables hover and click interaction.  
+|-  
+| {{code|focusedSoundPath}}  
+| {{code|string}}  
+| {{code|Theme.sounds.buttonFocused}}  
+| Sound played on hover. Resolves to {{code|common/launch_glow1.wav}}.  
+|-  
+| {{code|clickedSoundPath}}  
+| {{code|string}}  
+| {{code|Theme.sounds.buttonClicked}}  
+| Sound played on selection. Resolves to {{code|bms_objects/clickbeep/beep1.wav}}.  
+|-  
+| {{code|focusedColor}}  
+| {{code|color}}  
+| {{code|Theme.colors.highlight}} ({{code|#e47125}})  
+| Text color in the {{code|selected}} state. Despite the name, this is ''not'' the hover color.  
+|-  
+| {{code|blurredColor}}  
+| {{code|color}}  
+| {{code|Theme.colors.buttonText}} ({{code|white}})  
+| Text color in the {{code|blurred}} (idle) state.  
+|-  
+| {{code|selectedColor}}  
+| {{code|color}}  
+| {{code|Theme.colors.buttonText}} ({{code|white}})  
+| Text color in the {{code|focused}} (hover) state. Despite the name, this is ''not'' the selected color.  
+|-  
+| {{code|disabledColor}}  
+| {{code|color}}  
+| {{code|Theme.colors.dimmedText}} ({{code|#888888}})  
+| Text color in the {{code|disabled}} state.  
+|-  
+| {{code|focusShapeOpacity}}  
+| {{code|real}}  
+| {{code|0.75}}  
+| Opacity of the {{code|focusShape}} rectangle. {{code|MainNavButton}} overrides this to {{code|1}}.  
+|-  
+| {{code|buttonWidth}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(buttonText.contentWidth + 40 * Theme.heightScale)</nowiki></code>  
+| Auto-sized to text content plus horizontal padding. Uses {{code|heightScale}} for horizontal padding (see Observations).  
+|-  
+| {{code|buttonHeight}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(63 * Theme.heightScale)</nowiki></code>  
+| Default height. {{code|MainNavButton}} overrides this to {{code|Math.ceil(64 * Theme.heightScale)}}.  
+|-  
+| {{code|buttonTextFontSize}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(16 * Theme.heightScale)</nowiki></code>  
+| Font size of the button label.  
+|-  
+| {{code|barHeight}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code>  
+| Height of the {{code|focusShape}} in the {{code|selected}} state (the bottom bar indicator).  
+|-  
+| {{code|focusShapeWidthFocused}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(button.width - 10 * Theme.heightScale)</nowiki></code>  
+| Width of the {{code|focusShape}} when focused or selected. Uses {{code|heightScale}} for a width offset (see Observations).  
+|-  
+| {{code|focusShapeMargin}}  
+| {{code|int}}  
+| <code><nowiki>Math.ceil(5 * Theme.heightScale)</nowiki></code>  
+| Left margin of the {{code|focusShape}} from the button edge. Uses {{code|heightScale}} for a horizontal margin (see Observations).  
+|}  
+  
+====Children====  
+  
+=====Navigation Highlight Rectangle=====  
+  
+An anonymous {{code|Rectangle}} (lines 44–51) is positioned at the same x-coordinate and width as {{code|focusShape}}, spanning the full button height. It is visible only when <code><nowiki>button.selected && button.activeFocus</nowiki></code>. Its color is {{code|Theme.colors.navigationHighlight}} ({{code|#e88849}}) at {{code|opacity: 0.4}}. This provides a visual distinction between a selected button that has keyboard/controller focus and one that is selected but not focused — the lighter orange tint overlays the {{code|focusShape}} bar only when the button is actively focused by the input system.  
+  
+=====Focus Shape=====  
+  
+{{code|Rectangle}} (id: {{code|focusShape}}) is anchored to the bottom-left of the button with a left margin of {{code|focusShapeMargin}}. Its color is {{code|button.focusedColor}} and its opacity is {{code|button.focusShapeOpacity}}. Its {{code|width}} and {{code|height}} are animated by the state machine:  
+  
+* In {{code|blurred}} and {{code|disabled}}: width 0, height 0 (invisible).  
+* In {{code|focused}}: width {{code|focusShapeWidthFocused}}, height {{code|button.height}} (full-height vertical bar).  
+* In {{code|selected}}: width {{code|focusShapeWidthFocused}}, height {{code|barHeight}} (thin bottom bar).  
+  
+=====Button Text=====  
+  
+{{code|Text}} (id: {{code|buttonText}}) is centered in the button via {{code|anchors.centerIn: parent}}, uses {{code|Theme.fonts.regular}}, {{code|font.pixelSize: buttonTextFontSize}}, and {{code|font.capitalization: Font.AllUppercase}}. Its {{code|color}} and {{code|font.bold}} are controlled by the state machine.  
+  
+=====Inner Mouse Area=====  
+  
+{{code|MouseArea}} (id: {{code|mouseArea}}) fills the button. Key properties:  
+  
+* {{code|hoverEnabled: !button.disabled}} — hover events are suppressed when disabled.  
+* {{code|scrollGestureEnabled: false}} — prevents scroll gesture capture.  
+* {{code|propagateComposedEvents: !button.disabled}} — click events propagate to the parent (the outer {{code|button}} MouseArea) only when not disabled.  
+  
+====State Machine====  
+  
+States are defined on {{code|mouseArea}}. Initial state is set in {{code|Component.onCompleted}} based on {{code|button.disabled}} and {{code|button.selected}}.  
+  
+{| class="standard-table"  
+! State  
+! {{code|buttonText.color}}  
+! {{code|buttonText.font.bold}}  
+! {{code|focusShape}} width  
+! {{code|focusShape}} height  
+! Side effect  
+|-  
+| {{code|blurred}}  
+| {{code|blurredColor}} (white)  
+| {{code|false}}  
+| 0  
+| 0  
+| —  
+|-  
+| {{code|focused}}  
+| {{code|selectedColor}} (white)  
+| {{code|false}}  
+| {{code|focusShapeWidthFocused}}  
+| {{code|button.height}}  
+| Plays {{code|focusedSoundPath}} via {{code|StateChangeScript}}  
+|-  
+| {{code|selected}}  
+| {{code|focusedColor}} (orange)  
+| {{code|true}}  
+| {{code|focusShapeWidthFocused}}  
+| {{code|barHeight}} (8 px scaled)  
+| Plays {{code|clickedSoundPath}} via {{code|StateChangeScript}}  
+|-  
+| {{code|disabled}}  
+| {{code|disabledColor}} (#888888)  
+| {{code|false}}  
+| 0  
+| 0  
+| —  
+|}  
+  
+=====Transitions=====  
+  
+{| class="standard-table"  
+! From → To  
+! Animation  
+! Duration  
+! Easing  
+|-  
+| {{code|blurred}} → {{code|focused}}  
+| Sequential: instant width snap (1 ms), then parallel ColorAnimation + height NumberAnimation  
+| 250 ms  
+| {{code|Easing.OutQuint}}  
+|-  
+| {{code|focused}} → {{code|blurred}}  
+| Sequential: parallel ColorAnimation + height NumberAnimation, then instant width collapse (1 ms)  
+| 250 ms  
+| {{code|Easing.OutQuint}}  
+|-  
+| {{code|focused}} → {{code|selected}}  
+| Parallel: height NumberAnimation + ColorAnimation  
+| 150 ms  
+| {{code|Easing.OutQuint}}  
+|-  
+| {{code|selected}} → {{code|blurred}}  
+| Sequential: parallel height NumberAnimation + ColorAnimation, then instant width collapse (1 ms)  
+| 100 ms  
+| {{code|Easing.Linear}} (no easing specified)  
+|}  
+  
+The width of {{code|focusShape}} is always snapped instantly (1 ms {{code|NumberAnimation}}) rather than animated, so the visible animation is the vertical grow/shrink of the bar. The sequential structure ensures the width collapses only after the height animation completes, preventing a visual artifact where a zero-height bar remains at full width momentarily.  
+  
+====Event Handlers====  
+  
+=====On the outer {{code|button}} (MouseArea root)=====  
+  
+* {{code|onSelectedChanged}}: sets {{code|mouseArea.state}} to {{code|"selected"}} or, if deselected, to {{code|"focused"}} if {{code|button.containsMouse}}, otherwise {{code|"blurred"}}.  
+* {{code|onDisabledChanged}}: sets {{code|mouseArea.state}} to {{code|"disabled"}} or, if re-enabled, to {{code|"focused"}} if {{code|button.containsMouse}}, otherwise {{code|"blurred"}}.  
+  
+=====On the inner {{code|mouseArea}}=====  
+  
+* {{code|onEntered}}: transitions to {{code|"focused"}} if not selected or disabled.  
+* {{code|onExited}}: transitions to {{code|"blurred"}} if not selected or disabled.  
+* {{code|onClicked}}: if not selected or disabled, sets {{code|mouse.accepted [[=]] false}} (propagates the click to the outer {{code|button}} MouseArea, where consumers attach their {{code|onClicked}} handlers); otherwise sets {{code|mouse.accepted [[=]] true}} (consumes the event).  
+  
+====Consumers====  
+  
+{| class="standard-table"  
+! File  
+! Usage  
+! {{code|objectName}}  
+! {{code|type}} property  
+|-  
+| {{code|component-footer.qml}}  
+| {{code|id_btn_quit}} — Quit button; {{code|selected}} when current route is {{code|Routes.quit}}. {{code|id_btn_back}} — Back / Back to Game button; visible conditionally.  
+| {{code|"ui:btn:action[quit]"}}, {{code|"ui:btn:action[back]"}}  
+| —  
+|-  
+| {{code|component-header.qml}}  
+| Sub-nav delegate in the sub-navigation {{code|ListView}}; {{code|selected}} when <code><nowiki>currentRoute.path.split('.')[1] === routeName</nowiki></code>.  
+| {{code|"ui:tab"}}  
+| {{code|"sub"}}  
+|-  
+| {{code|routeview-translators.qml}}  
+| Two tab buttons (Proofreaders / Translators); {{code|selected}} drives {{code|activeTab}} integer.  
+| {{code|"ui:tab"}}  
+| {{code|"sub-nav"}}  
+|-  
+| {{code|button-mainnav.qml}}  
+| Subtype; overrides {{code|focusedColor}}, {{code|selectedColor}}, {{code|focusShapeOpacity}}, and {{code|height}}.  
+| —  
+| —  
+|}  
+  
+====Observations====  
+  
+1. '''{{code|focusedColor}} and {{code|selectedColor}} are semantically swapped.''' {{code|focusedColor}} (orange) is applied in the {{code|selected}} state; {{code|selectedColor}} (white) is applied in the {{code|focused}} (hover) state. This naming inversion is inherited by {{code|MainNavButton}}, which sets <code><nowiki>focusedColor: Theme.colors.buttonText</nowiki></code> and <code><nowiki>selectedColor: Theme.colors.highlight</nowiki></code> — the opposite of the base defaults — to achieve the correct visual result for main-nav buttons.  
+  
+2. '''Three horizontal dimension properties use {{code|Theme.heightScale}}.''' {{code|buttonWidth}}, {{code|focusShapeWidthFocused}}, and {{code|focusShapeMargin}} all multiply by {{code|Theme.heightScale}} instead of {{code|Theme.widthScale}}. On non-16:9 displays where the two scale factors differ, the button width and focus shape will not scale correctly relative to the horizontal axis.  
+  
+3. '''The root element is a {{code|MouseArea}}.''' The outer {{code|MouseArea}} ({{code|button}}) is used solely to expose {{code|containsMouse}} for state recovery in {{code|onSelectedChanged}} and {{code|onDisabledChanged}}, and to serve as the click target for consumers. All interaction logic lives in the inner {{code|mouseArea}}. Using {{code|Item}} as the root with an explicit {{code|containsMouse}} property would be cleaner and avoid the ambiguity of two nested {{code|MouseArea}} elements.  
+  
+4. '''No {{code|selected}} → {{code|focused}} transition.''' When a button is deselected while the mouse is hovering, {{code|onSelectedChanged}} sets the state directly to {{code|"focused"}} without an animated transition. The {{code|focusShape}} jumps from bar height to full height instantly.  
+  
+5. '''{{code|selected}} → {{code|blurred}} uses {{code|Easing.Linear}}.''' All other transitions specify {{code|Easing.OutQuint}}. The deselection animation (100 ms, linear) is noticeably faster and less smooth than the focus-in animation (250 ms, OutQuint).  
+  
+6. '''{{code|onClicked}} and {{code|StateChangeScript}} both reference sound playback, but the direct calls are commented out.''' The {{code|onEntered}} handler has a commented-out {{code|Sound.playEffect(button.focusedSoundPath)}} call, and {{code|onClicked}} has a commented-out {{code|Sound.playEffect(button.clickedSoundPath)}} call. Sound is played exclusively through the {{code|StateChangeScript}} blocks inside the {{code|focused}} and {{code|selected}} states. The commented-out calls are dead code.  
+  
+7. '''{{code|buttonHeight}} defaults to 63 px (scaled), not 64 px.''' The 1 px discrepancy is acknowledged in {{code|component-header.qml}} with a TODO comment noting that the logo image is 63 px and should be 64 px. {{code|MainNavButton}} overrides {{code|height}} to {{code|Math.ceil(64 * Theme.heightScale)}} to match the intended header height.
+
+===button-mainnav.qml===  
+  
+{{code|button-mainnav.qml}} defines the {{code|MainNavButton}} type, the top-level navigation tab button used in the main navigation bar of the Black Mesa Qt/QML UI. It is a thin subclass of {{code|LetterboxButton}} ({{code|button-letterbox.qml}}) that overrides four properties to produce the specific visual behaviour required for primary navigation tabs.  
+  
+====Registration====  
+  
+Registered in {{code|qmldir}} as:  
+  
+ MainNavButton 1.0    button-mainnav.qml  
+  
+====Base Type====  
+  
+{{code|MainNavButton}} extends {{code|LetterboxButton}}, which is itself a {{code|MouseArea}} root. All interaction logic, state machine, animation, and child elements are inherited from {{code|LetterboxButton}}. {{code|button-mainnav.qml}} contains no additional properties, signals, functions, or child elements of its own.  
+  
+====Property Overrides====  
+  
+{| class="standard-table"  
+! Property  
+! Base default  
+! MainNavButton value  
+! Effect  
+|-  
+| {{code|focusedColor}}  
+| <code><nowiki>Theme.colors.highlight</nowiki></code> ({{code|#e47125}}, orange)  
+| <code><nowiki>Theme.colors.buttonText</nowiki></code> ({{code|white}})  
+| The {{code|focusShape}} rectangle is rendered white instead of orange. In the {{code|selected}} state, the text color is also driven by {{code|focusedColor}}, so selected-tab text is white.  
+|-  
+| {{code|selectedColor}}  
+| <code><nowiki>Theme.colors.buttonText</nowiki></code> ({{code|white}})  
+| <code><nowiki>Theme.colors.highlight</nowiki></code> ({{code|#e47125}}, orange)  
+| In the {{code|focused}} state, text color is driven by {{code|selectedColor}}, so hovered-tab text turns orange.  
+|-  
+| {{code|focusShapeOpacity}}  
+| {{code|0.75}}  
+| {{code|1}}  
+| The {{code|focusShape}} rectangle is fully opaque rather than 75% opaque.  
+|-  
+| {{code|height}}  
+| <code><nowiki>Math.ceil(63 * Theme.heightScale)</nowiki></code>  
+| <code><nowiki>Math.ceil(64 * Theme.heightScale)</nowiki></code>  
+| One scaled pixel taller than the base class default. The base class has a TODO comment noting the 63 px value is a hack because the logo image is 63 px rather than 64 px.  
+|}  
+  
+====Inherited State Machine====  
+  
+All four states are defined in {{code|LetterboxButton}} and are unmodified by {{code|MainNavButton}}. The effective visual result for each state, given the overrides above, is:  
+  
+{| class="standard-table"  
+! State  
+! Text color  
+! {{code|focusShape}} geometry  
+! Trigger  
+|-  
+| {{code|blurred}}  
+| <code><nowiki>Theme.colors.buttonText</nowiki></code> (white)  
+| width 0, height 0 (hidden)  
+| Mouse leaves button; button not selected  
+|-  
+| {{code|focused}}  
+| <code><nowiki>Theme.colors.highlight</nowiki></code> (orange)  
+| Full button width, full button height (white bar, opacity 1)  
+| Mouse enters button; button not selected  
+|-  
+| {{code|selected}}  
+| <code><nowiki>Theme.colors.buttonText</nowiki></code> (white, bold)  
+| Full button width, <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code> height (thin white underline bar)  
+| {{code|selected}} property set to {{code|true}} by consumer  
+|-  
+| {{code|disabled}}  
+| <code><nowiki>Theme.colors.dimmedText</nowiki></code> ({{code|#888888}})  
+| width 0, height 0 (hidden)  
+| {{code|disabled}} property set to {{code|true}} by consumer  
+|}  
+  
+An additional {{code|Rectangle}} ({{code|color: Theme.colors.navigationHighlight}}, {{code|#e88849}}, opacity 0.4) is rendered at full button height when the button is simultaneously {{code|selected}} and has {{code|activeFocus}}. This provides a visual indicator for keyboard/controller navigation over the currently active tab.  
+  
+====Transition Animations====  
+  
+Inherited from {{code|LetterboxButton}}:  
+  
+{| class="standard-table"  
+! Transition  
+! Animation  
+! Duration  
+|-  
+| {{code|blurred}} → {{code|focused}}  
+| {{code|focusShape}} width snaps to target in 1 ms, then height and text color animate in parallel  
+| 250 ms, {{code|Easing.OutQuint}}  
+|-  
+| {{code|focused}} → {{code|blurred}}  
+| Height and text color animate in parallel, then width snaps to 0  
+| 250 ms, {{code|Easing.OutQuint}}  
+|-  
+| {{code|focused}} → {{code|selected}}  
+| {{code|focusShape}} height and text color animate in parallel (bar collapses from full height to 8 px)  
+| 150 ms, {{code|Easing.OutQuint}}  
+|-  
+| {{code|selected}} → {{code|blurred}}  
+| Height and text color animate in parallel, then width snaps to 0  
+| 100 ms (no easing)  
+|}  
+  
+No transition is defined for {{code|blurred}} → {{code|selected}} or {{code|selected}} → {{code|focused}}. These transitions fall back to immediate property changes.  
+  
+====Click Behaviour====  
+  
+Inherited from {{code|LetterboxButton}}: if the button is in the {{code|selected}} or {{code|disabled}} state when clicked, {{code|mouse.accepted}} is set to {{code|true}} (event consumed). Otherwise {{code|mouse.accepted}} is set to {{code|false}}, allowing the event to propagate to the parent {{code|ListView}} delegate, which connects {{code|onClicked}} to {{code|header.routeRequest(routeName)}}.  
+  
+====Sound Effects====  
+  
+Inherited from {{code|LetterboxButton}}:  
+  
+* Focus sound: <code><nowiki>Theme.sounds.buttonFocused</nowiki></code> ({{code|common/launch_glow1.wav}}), played on entry to the {{code|focused}} state via {{code|StateChangeScript}}.  
+* Click sound: <code><nowiki>Theme.sounds.buttonClicked</nowiki></code> ({{code|bms_objects/clickbeep/beep1.wav}}), played on entry to the {{code|selected}} state via {{code|StateChangeScript}}.  
+  
+Both the {{code|onEntered}} hover sound call and the {{code|onClicked}} click sound call in {{code|LetterboxButton}} are commented out; sounds are played exclusively through {{code|StateChangeScript}} entries in the state definitions.  
+  
+====Usage====  
+  
+{{code|MainNavButton}} is used in exactly one location: the {{code|mainNavListView}} delegate inside {{code|component-header.qml}}.  
+  
+<syntaxhighlight lang="qml">  
+delegate: MainNavButton {  
+    readonly property string type: "main"  
+    objectName: "ui:tab"  
+    text: label  
+    selected: currentRoute && currentRoute.path.split('.')[0] === routeName  
+    onClicked: header.routeRequest(routeName)  
+}  
+</syntaxhighlight>  
+  
+The {{code|selected}} binding compares the first path segment of the current route (e.g. {{code|options}} from {{code|options.video}}) against the button's {{code|routeName}} model role. This means all sub-routes under a top-level section keep the corresponding main nav tab highlighted.  
+  
+====Technical Notes====  
+  
+1. '''{{code|focusedColor}} and {{code|blurredColor}} produce the same text color in {{code|blurred}} state.''' {{code|blurredColor}} is not overridden and remains {{code|Theme.colors.buttonText}} (white). {{code|focusedColor}} is also set to {{code|Theme.colors.buttonText}} (white). The text color therefore does not change between {{code|blurred}} and {{code|focused}} states — only the {{code|focusShape}} geometry animates. The visual distinction between blurred and focused is entirely the white background bar appearing behind the text.  
+  
+2. '''The {{code|focused}} state renders white text on a white background.''' In the {{code|focused}} state, {{code|focusShape}} expands to full button height with {{code|color: button.focusedColor}} (white) and {{code|opacity: 1}}. The text color is {{code|selectedColor}} (orange). The result is orange text on a white background bar, which is the intended hover appearance.  
+  
+3. '''{{code|height}} override is 1 px taller than {{code|buttonHeight}}.''' {{code|LetterboxButton}} defines {{code|buttonHeight: Math.ceil(63 * Theme.heightScale)}} and sets {{code|height: buttonHeight}}. {{code|MainNavButton}} overrides {{code|height}} directly to <code><nowiki>Math.ceil(64 * Theme.heightScale)</nowiki></code>, bypassing {{code|buttonHeight}}. The {{code|buttonHeight}} property still exists on the instance with its original value of 63 scaled px, creating a silent discrepancy between {{code|buttonHeight}} and the actual rendered height.  
+  
+4. '''No {{code|blurred}} → {{code|selected}} transition.''' When the router sets a route on startup ({{code|Component.onCompleted}}), the button transitions directly from {{code|blurred}} to {{code|selected}} with no animation. This is correct behaviour for initial load but means the first navigation after startup also has no animation if the button was never hovered.  
+  
+5. '''{{code|type: "main"}} is a readonly inline property.''' The {{code|type}} property set on the delegate is not declared on {{code|MainNavButton}} or {{code|LetterboxButton}}; it is an ad-hoc property added at the instantiation site. It is used by {{code|utils.qml}} to identify main-nav buttons during keyboard/controller UI traversal.
+
+===button-triangle.qml===  
+  
+{{code|button-triangle.qml}} implements a small directional arrow button rendered as a rotated triangle. It is registered in {{code|qmldir}} as {{code|TriangleButton 1.0}} and is the sole interactive consumer of the {{code|Triangle 1.0}} primitive ({{code|triangle.qml}}). Its only consumer in the codebase is {{code|component-optionslist-input-select.qml}}, where it appears as the left and right navigation arrows of the select input widget.  
+  
+====Registration====  
+  
+{| class="standard-table"  
+! File !! Registered type !! Version  
+|-  
+| {{code|button-triangle.qml}} || {{code|TriangleButton}} || 1.0  
+|-  
+| {{code|triangle.qml}} || {{code|Triangle}} || 1.0  
+|}  
+  
+====Root element====  
+  
+The root element is a {{code|MouseArea}} ({{code|id: container}}). It does '''not''' extend {{code|DefaultButton}}; it is an independent implementation. Default dimensions are <code><nowiki>height: parent.height</nowiki></code> and {{code|width: 30}} (hardcoded, unscaled pixels). {{code|hoverEnabled}} is {{code|true}}.  
+  
+====Properties====  
+  
+{| class="standard-table"  
+! Property !! Type !! Default !! Description  
+|-  
+| {{code|directions}} || readonly {{code|QtObject}} || — || Namespace object exposing the two canonical rotation values: {{code|left}} ({{code|-45}}) and {{code|right}} ({{code|135}}).  
+|-  
+| {{code|focusedColor}} || {{code|color}} || {{code|Theme.colors.highlight}} || Triangle fill color when hovered ({{code|#e47125}}).  
+|-  
+| {{code|blurredColor}} || {{code|color}} || {{code|Theme.colors.buttonText}} || Triangle fill color at rest ({{code|white}}).  
+|-  
+| {{code|triangleHeight}} || {{code|int}} || {{code|20}} || Height passed to the child {{code|Triangle}} item. Unscaled by default.  
+|-  
+| {{code|triangleWidth}} || {{code|int}} || {{code|20}} || Width passed to the child {{code|Triangle}} item. Unscaled by default.  
+|-  
+| {{code|direction}} || {{code|int}} || <code><nowiki>directions.left</nowiki></code> || Rotation angle (degrees) applied to the child {{code|Triangle}} item. Defaults to {{code|-45}} (left-pointing).  
+|}  
+  
+====Triangle child====  
+  
+A single {{code|Triangle}} ({{code|id: triangle}}) is instantiated with:  
+  
+* <code><nowiki>height: triangleHeight</nowiki></code>, <code><nowiki>width: triangleWidth</nowiki></code>  
+* <code><nowiki>rotation: direction</nowiki></code>  
+* <code><nowiki>anchors.centerIn: parent</nowiki></code>  
+* <code><nowiki>anchors.horizontalCenterOffset: direction === directions.left ? 5 : -5</nowiki></code>  
+  
+The horizontal offset compensates for the visual asymmetry introduced by the rotated-rectangle clipping technique used inside {{code|triangle.qml}} (see below).  
+  
+=====triangle.qml internals=====  
+  
+{{code|triangle.qml}} renders a triangle by placing a square {{code|Rectangle}} at a corner of a clipping {{code|Item}} and rotating it 45°. The {{code|clip: true}} property on the root {{code|Item}} reveals only the triangular portion of the rotated square.  
+  
+{| class="standard-table"  
+! Property !! Value !! Notes  
+|-  
+| {{code|corner}} || {{code|int}}, default {{code|0}} || Selects which corner of the Item the rectangle is anchored to (0–3, clockwise from top-left). Never set by {{code|TriangleButton}}; always remains {{code|0}}.  
+|-  
+| {{code|color}} || alias to <code><nowiki>rect.color</nowiki></code> || Exposed as a direct property alias.  
+|-  
+| {{code|rect.width}} || <code><nowiki>Math.min(component.width, component.height)</nowiki></code> || Square side equal to the smaller Item dimension.  
+|-  
+| {{code|rect.rotation}} || {{code|45}} || Fixed internal rotation to form the triangle shape.  
+|-  
+| {{code|rect.scale}} || <code><nowiki>1.4 * Theme.heightScale</nowiki></code> || Scales the rectangle to ensure it fills the corner at all display scales.  
+|}  
+  
+The orientation of the triangle is controlled entirely by the {{code|rotation}} property set on the {{code|Triangle}} item from {{code|TriangleButton}}, not by the {{code|corner}} property.  
+  
+====States====  
+  
+{| class="standard-table"  
+! State !! Trigger !! Effect  
+|-  
+| {{code|blurred}} || Default; {{code|onExited}}; {{code|onEnabledChanged}} when disabled || <code><nowiki>triangle.color: blurredColor</nowiki></code> (white)  
+|-  
+| {{code|focused}} || {{code|onEntered}} || <code><nowiki>triangle.color: focusedColor</nowiki></code> (#e47125); plays {{code|Theme.sounds.buttonFocused}}  
+|}  
+  
+====Transitions====  
+  
+Both {{code|blurred → focused}} and {{code|focused → blurred}} use a {{code|ColorAnimation}} on {{code|triangle}} with {{code|duration: 75}}.  
+  
+====Consumer: component-optionslist-input-select.qml====  
+  
+{{code|TriangleButton}} is instantiated twice in {{code|component-optionslist-input-select.qml}}:  
+  
+{| class="standard-table"  
+! Instance !! {{code|id}} !! {{code|direction}} !! {{code|visible}} condition !! {{code|onClicked}} action  
+|-  
+| Left arrow || {{code|leftArrow}} || <code><nowiki>leftArrow.directions.left</nowiki></code> || <code><nowiki>selectedIndex !== 0</nowiki></code> || Emits <code><nowiki>requestSettingsChange(model, model.options.get(selectedIndex - 1).value)</nowiki></code>  
+|-  
+| Right arrow || {{code|rightArrow}} || <code><nowiki>rightArrow.directions.right</nowiki></code> || <code><nowiki>selectedIndex !== model.options.count - 1</nowiki></code> || Emits <code><nowiki>requestSettingsChange(model, model.options.get(selectedIndex + 1).value)</nowiki></code>  
+|}  
+  
+Both instances override the default dimensions:  
+  
+* <code><nowiki>width: Math.ceil(40 * Theme.widthScale)</nowiki></code>  
+* <code><nowiki>triangleWidth: Math.ceil(20 * Theme.heightScale)</nowiki></code>  
+* <code><nowiki>triangleHeight: Math.ceil(20 * Theme.heightScale)</nowiki></code>  
+* <code><nowiki>enabled: !model.disabled</nowiki></code>  
+* <code><nowiki>opacity: enabled ? 1.0 : 0.0</nowiki></code> with a 350 ms {{code|NumberAnimation}} behavior  
+  
+The click sound ({{code|Theme.sounds.buttonClicked}}) is played by the consumer's {{code|onClicked}} handler, not by {{code|TriangleButton}} itself.  
+  
+====Notable observations====  
+  
+1. '''No {{code|disabled}} state.''' {{code|DefaultButton}} has an explicit {{code|disabled}} state with dimmed colors. {{code|TriangleButton}} only handles {{code|onEnabledChanged}} by forcing the state to {{code|blurred}}, leaving the triangle white rather than dimmed. The consumer hides the button entirely via {{code|opacity: 0}} when disabled, so this is not visible in practice, but the component itself provides no disabled visual feedback.  
+  
+2. '''No click sound.''' {{code|TriangleButton}} plays {{code|Theme.sounds.buttonFocused}} on hover but emits no sound on click. The consumer is responsible for playing {{code|Theme.sounds.buttonClicked}} in its own {{code|onClicked}} handler. This is the inverse of {{code|DefaultButton}}, which plays the click sound internally.  
+  
+3. '''Default dimensions are unscaled.''' {{code|width: 30}}, {{code|triangleHeight: 20}}, and {{code|triangleWidth: 20}} are all raw pixel values with no {{code|Theme.widthScale}} or {{code|Theme.heightScale}} multiplication. Every consumer must override these properties to achieve correct scaling.  
+  
+4. '''Double-scaling risk on {{code|triangle.qml}}.''' The {{code|Rectangle}} inside {{code|triangle.qml}} applies <code><nowiki>scale: 1.4 * Theme.heightScale</nowiki></code>. If the consumer also scales {{code|triangleHeight}} and {{code|triangleWidth}} by {{code|Theme.heightScale}}, the rendered triangle is effectively scaled twice: once by the Item dimensions and once by the internal {{code|scale}} factor. At {{code|heightScale}} values significantly above 1.0 this may cause the triangle to overflow its clipping bounds.  
+  
+5. '''{{code|corner}} property on {{code|Triangle}} is dead code in this context.''' {{code|TriangleButton}} never sets {{code|corner}}; it always remains {{code|0}} (top-left). All four orientations are achieved by rotating the entire {{code|Triangle}} item via {{code|rotation: direction}}. The {{code|corner}} property exists on {{code|triangle.qml}} for potential standalone use but is unused by its only registered consumer.  
+  
+6. '''{{code|direction}} accepts any integer.''' The {{code|directions}} QtObject provides named constants, but {{code|direction}} is a plain writable {{code|int}}. Passing an arbitrary angle produces a triangle pointing in that direction, which is a valid use case but is undocumented.  
+  
+7. '''{{code|anchors.horizontalCenterOffset}} is hardcoded to ±5.''' The offset is not scaled by {{code|Theme.widthScale}}. At high display scales the visual centering of the triangle within the button area will be slightly off.
+
+===button-warning.qml===  
+  
+{{code|button-warning.qml}} defines the {{code|WarningButton}} type, a destructive-action variant of {{code|DefaultButton}} styled with a red color scheme. It is registered in {{code|qmldir}} as {{code|WarningButton 1.0 button-warning.qml}} and is used exclusively inside {{code|Alert}} dialog button rows to represent irreversible or potentially harmful actions.  
+  
+====Registration====  
+  
+{| class="standard-table"  
+! Key  
+! Value  
+|-  
+| Type name  
+| {{code|WarningButton}}  
+|-  
+| Version  
+| {{code|1.0}}  
+|-  
+| Source file  
+| {{code|button-warning.qml}}  
+|-  
+| Base type  
+| {{code|DefaultButton}} ({{code|button-default.qml}})  
+|}  
+  
+====File Contents====  
+  
+The file is 8 lines and contains only three property overrides on the {{code|DefaultButton}} base:  
+  
+{| class="standard-table"  
+! Property  
+! Overridden value  
+! Inherited default  
+! Effect  
+|-  
+| {{code|bold}}  
+| {{code|true}}  
+| {{code|false}}  
+| Button label uses {{code|Theme.fonts.bold}} instead of {{code|Theme.fonts.regular}}.  
+|-  
+| {{code|boxColor}}  
+| {{code|Theme.colors.warning}}  
+| {{code|Theme.colors.buttonText}}  
+| Sets the border color and {{code|focusShape}} fill color to {{code|#c72424}} (red).  
+|-  
+| {{code|focusedTextColor}}  
+| {{code|Theme.colors.buttonText}}  
+| {{code|Theme.colors.highlight}}  
+| Sets the focused-state text color to white ({{code|#ffffff}}), overriding the default orange ({{code|#e47125}}).  
+|}  
+  
+All other {{code|DefaultButton}} properties are inherited unchanged.  
+  
+====Base Class Behavior (DefaultButton)====  
+  
+{{code|DefaultButton}} ({{code|button-default.qml}}) is a {{code|MouseArea}} root with four child elements:  
+  
+{| class="standard-table"  
+! Child id  
+! Type  
+! Role  
+|-  
+| {{code|border}}  
+| {{code|Rectangle}}  
+| Draws the outer border using {{code|boxColor}}; fill is transparent.  
+|-  
+| {{code|focusShape}}  
+| {{code|Rectangle}}  
+| Fills from the bottom of the button; height animates between a small bar (blurred) and full button height (focused).  
+|-  
+| {{code|buttonText}}  
+| {{code|Text}}  
+| Displays the {{code|text}} property; font weight controlled by {{code|bold}}.  
+|-  
+| {{code|mouseArea}}  
+| {{code|MouseArea}}  
+| Manages hover, click, and disabled state transitions.  
+|}  
+  
+The inner {{code|mouseArea}} has three states:  
+  
+{| class="standard-table"  
+! State  
+! {{code|focusShape}} height  
+! {{code|focusShape}} color  
+! Text color  
+! Text vertical offset  
+|-  
+| {{code|blurred}}  
+| <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code>  
+| {{code|boxColor}}  
+| {{code|blurredTextColor}}  
+| <code><nowiki>Math.ceil(-4 * Theme.heightScale)</nowiki></code>  
+|-  
+| {{code|focused}}  
+| Full button height  
+| {{code|boxColor}}  
+| {{code|focusedTextColor}}  
+| {{code|0}}  
+|-  
+| {{code|disabled}}  
+| <code><nowiki>Math.ceil(8 * Theme.heightScale)</nowiki></code>  
+| {{code|disabledBoxColor}}  
+| {{code|disabledTextColor}}  
+| <code><nowiki>Math.ceil(-4 * Theme.heightScale)</nowiki></code>  
+|}  
+  
+Transitions between {{code|blurred}} and {{code|focused}} animate {{code|focusShape}} height, text color, and text vertical offset over 150 ms with {{code|Easing.OutQuint}}. The {{code|blurred}}↔{{code|disabled}} and {{code|focused}}↔{{code|disabled}} transitions animate colors only.  
+  
+====Visual Appearance of WarningButton====  
+  
+Combining the overrides with the inherited defaults:  
+  
+{| class="standard-table"  
+! State  
+! Border color  
+! Fill color  
+! Text color  
+! Text weight  
+|-  
+| Blurred  
+| {{code|#c72424}} (red)  
+| {{code|#c72424}} (red, small bar)  
+| {{code|#ffffff}} (white)  
+| Bold  
+|-  
+| Focused  
+| {{code|#c72424}} (red)  
+| {{code|#c72424}} (red, full height)  
+| {{code|#ffffff}} (white)  
+| Bold  
+|-  
+| Disabled  
+| {{code|#888888}} (gray)  
+| {{code|#888888}} (gray, small bar)  
+| {{code|#888888}} (gray)  
+| Bold  
+|}  
+  
+Because {{code|blurredTextColor}} (inherited as {{code|Theme.colors.buttonText}} = {{code|#ffffff}}) and {{code|focusedTextColor}} (explicitly set to {{code|Theme.colors.buttonText}} = {{code|#ffffff}}) are identical, the text color does not change between blurred and focused states. The only visible focus indicator is the {{code|focusShape}} expanding to fill the button.
+
+====Usage====  
+  
+{{code|WarningButton}} is used in six files, always as a button inside an {{code|Alert}} dialog's {{code|VisualItemModel}} buttons list, or as a standalone action button:  
+  
+{| class="standard-table"  
+! File  
+! Context  
+! {{code|objectName}}  
+! Label  
+! Action  
+|-  
+| {{code|routeview-audio.qml}}  
+| Unsaved changes alert  
+| <code><nowiki>ui:btn:action[discard]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.discard</nowiki></code>  
+| Navigates away without applying pending audio option changes.  
+|-  
+| {{code|routeview-video.qml}}  
+| Unsaved changes alert  
+| <code><nowiki>ui:btn:action[discard]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.discard</nowiki></code>  
+| Navigates away without applying pending video option changes.  
+|-  
+| {{code|routeview-savegame.qml}}  
+| Overwrite save confirmation alert  
+| <code><nowiki>ui:btn:action[apply]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.overwriteSave</nowiki></code>  
+| Calls <code><nowiki>saveGame.saveGameRequest(selectedModel.savename)</nowiki></code>.  
+|-  
+| {{code|routeview-savegame.qml}}  
+| Delete save confirmation alert  
+| <code><nowiki>ui:btn:action[apply]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.deleteSave</nowiki></code>  
+| Calls {{code|BlackMesaEngine.removeSaveEntry()}} and clears the carousel model.  
+|-  
+| {{code|routeview-loadgame.qml}}  
+| Delete save confirmation alert  
+| <code><nowiki>ui:btn:action[apply]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.deleteSave</nowiki></code>  
+| Calls {{code|BlackMesaEngine.removeSaveEntry()}} and clears the carousel model.  
+|-  
+| {{code|routeview-bindings.qml}}  
+| Binding list action row  
+| <code><nowiki>ui:btn:action[clear]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.clearBinding</nowiki></code>  
+| Clears the selected key binding via {{code|InputBindingsManager}}.  
+|-  
+| {{code|component-optionslist.qml}}  
+| Options list footer  
+| <code><nowiki>ui:btn:action[reset]</nowiki></code>  
+| <code><nowiki>L10n.strings.buttons.resetAllDefaults</nowiki></code>  
+| Resets all options in the current list to defaults and emits {{code|settingsReset()}}.  
+|}  
+  
+In all alert contexts, {{code|WarningButton}} occupies the "confirm destructive action" position, paired with a {{code|DefaultButton}} for cancel. In the unsaved-changes alerts (audio, video), it is the middle button in a three-button row: {{code|CTAButton}} (apply) → {{code|WarningButton}} (discard) → {{code|DefaultButton}} (cancel).  
+  
+====Notable Issues====  
+  
+1. '''Text color is identical in blurred and focused states.''' The explicit override <code><nowiki>focusedTextColor: Theme.colors.buttonText</nowiki></code> sets the focused text color to white, which is the same as the inherited {{code|blurredTextColor}}. The only visual change on hover is the {{code|focusShape}} fill expanding. In {{code|DefaultButton}}, the focused text color is {{code|Theme.colors.highlight}} (orange), which provides a distinct color cue; {{code|WarningButton}} suppresses this. The intent is presumably to keep white text readable against the red fill, but it eliminates the text-color transition animation entirely.  
+  
+2. '''{{code|bold}} is hardcoded and cannot be overridden by consumers.''' QML property bindings set in a subtype can be overridden by the instantiating parent, but since {{code|bold: true}} is a direct assignment in the component definition, any consumer that sets {{code|bold: false}} will override it. In practice no consumer does this, but the property is not {{code|readonly}}, so the hardcoding is implicit rather than enforced.  
+  
+3. '''Disabled appearance is identical to a disabled {{code|DefaultButton}}.''' The {{code|disabledBoxColor}} and {{code|disabledTextColor}} properties are not overridden, so a disabled {{code|WarningButton}} renders in {{code|#888888}} gray — the same as any other disabled button. There is no visual indication that the disabled button was a warning-type action.  
+  
+4. '''No {{code|id}} on the root element.''' Consistent with {{code|DefaultButton}}, the root {{code|MouseArea}} has {{code|id: button}} in the base class, but {{code|button-warning.qml}} does not re-declare an id. Child elements of {{code|WarningButton}} instances cannot reference the root by a {{code|WarningButton}}-specific id.  
+  
+5. '''{{code|boxColor}} is not {{code|readonly}}.''' Consumers can override {{code|boxColor}} after instantiation, which would change the border and fill color away from red. No consumer currently does this, but the warning semantics of the type are not structurally enforced.

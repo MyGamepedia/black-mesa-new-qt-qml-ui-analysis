@@ -1,0 +1,619 @@
+{{bms topicon}}
+{{TabsBar|main=Black Mesa Qt UI}}
+This page contains all the information about {{bms|4}} API for the Qt UI, provided by '''BlackMesaUI''' binary.
+{{note|All the information about '''BlackMesaEngine''' QML type, data object schemas, and enumerations, is based on the original documentation created by Oleksandr Palamar (the programmer who implemented the Qt UI for the game).}}
+
+==Campaigns System==
+The '''BlackMesaEngine''' singleton type (see below) can provide array of '''CampaignEntry''' objects, the objects are used in the QML code to create campaigns lists, for the official game campaign (file '''blackmesa.json''') in the '''Campaign''' section, and for '''Steam Workshop''' maps (custom campaigns). When an array of '''CampaignEntry''' objects requested from QML via {{code|listCampaignEntries()}}, the UI reads all JSON files provided in '''campaigns''' folder and returns the array of '''CampaignEntry''' objects. The UI hardcodes {{code|isOfficial}} parameter value for all '''CampaignEntry''' objects, sets false for all the objects, except '''blackmesa.json''', the UI sets true for it, via ''campaigns/blackmesa.json'' string check. Other parameter in a '''CampaignEntry''' object are defined and set by the JSON file, this means any static parameter and value for it can be added and used in the QML code for custom logic (e.g. a chance to get different chapter thumbnail). The original Black Mesa QML code only uses only:
+* '''title''' - name for the campaign, can be translated via '''#''' at the start of string.
+* '''imageSource''' - image for the campaign thumbnail.
+* '''chapters''' - array of plain data objects, contains chapters for the campaign.
+
+The original JSON file from Black Mesa also provides following parameters, but they are never used in the QML code:
+* '''author''' - author name.
+* '''description''' - short description of the campaign.
+* '''url ''' - author's resource link.
+
+From the '''chapters''' array, the original Black Mesa QML code only uses:
+* '''title''' - name for the chapter, can be translated via '''#''' at the start of string.
+* '''imageSource''' - image for the thumbnail for the chapter.
+* '''levelName''' - BSP map file name to use for chapter launch.
+
+The '''description''' parameter is unused.
+
+If the JSON file provided only one chapter, the UI skips the chapter carousel entirely and launches the single chapter on '''START GAME''' button, instead of showing the chapters list.
+
+Following format used in the JSON file (can be used as a template):
+<source lang=json>
+{
+    "title": "CampaignName",
+    "imageSource": "image://game/campaigns/CampaignName/images/CampaignLogo.jpg",
+    "chapters": [
+        {
+            "title": "CampaignChapter1",
+            "imageSource": "image://game/campaigns/CampaignName/images/CampaignChapter1.png",
+            "levelName": "map1"
+        },
+        {
+            "title": "CampaignChapter2",
+            "imageSource": "image://game/campaigns/CampaignName/images/CampaignChapter2.png",
+            "levelName": "map2"
+        },
+        {
+            "title": "CampaignChapterX",
+            "imageSource": "image://game/campaigns/CampaignName/images/CampaignChapterX.png",
+            "levelName": "mapX"
+        }
+    ]
+}
+</source>
+
+Adding a new JSON file in the folder will be enough for the UI to load show a custom campaign in the '''Steam Workshop''' section, note that it is recommended to keep images everything in '''campaigns''' folder, the ''ui/campaign/images/'' folder is designed for official campaigns. For custom official campaign in the '''Campaign''' section for a total convention (modification), just edit '''blackmesa.json''' file.
+
+==VFS Protocol (vfs://)==
+'''vfs://''' is a custom URL scheme registered into Qt's networking stack. It lets QML code load files through the {{source|4}} Engine's Virtual File System — meaning files can be resolved from [[VPK]] archives, mounted game directories, or any other path the engine has mounted, rather than the raw OS file system.
+
+It is implemented as a custom '''QNetworkAccessManager''' (or equivalent network handler) that intercepts '''vfs://''' URLs and routes them through the Source Engine's '''IFileSystem''' interface. This is described in the Engine Integration Layer as the "Custom Network Access Manager" integration point. 
+
+===URL Format===
+<source lang=qml>
+vfs:///path/to/file
+</source>
+
+The path is relative to the engine's search paths (same resolution rules as {{code|filesystem->Open()}}). The triple slash (///) is standard for a local-path URI with an empty host.
+
+===How it's used in QML===
+====Loading fonts via FontLoader====
+'''theme.qml''' uses '''vfs:///''' to load all UI fonts from the engine file system:
+
+<source lang=qml>
+FontLoader { source: "vfs:///ui/fonts/firamono-regular.ttf" }  
+FontLoader { source: "vfs:///ui/fonts/notosans-light.ttf" }
+</source>
+
+Example can be found in '''theme.qml''' around lines 84-104.
+
+====Reading config files via XMLHttpRequest====
+
+'''input-bindings-manager.qml''' uses '''vfs:///''' to read '''config.cfg''' through an '''XMLHttpRequest'''-based helper:
+
+<source lang=qml>
+_readConfigFile("vfs:///cfg/config_example.cfg", function (response) { ... })
+</source>
+
+Example can be found in '''input-bindings-manager.qml''' around lines 247-249.
+
+==image:// Image Provider==
+'''image://''' is a QML built-in URL scheme for loading images through a custom image provider — a C++ class (QQuickImageProvider) registered into the QQmlEngine. The format is:
+
+<source lang=qml>
+image://<provider-id>/<path>  
+</source>
+
+In Black Mesa, the provider ID is game, so all image URLs start with '''image://game/'''. It is registered by BlackMesaUI.dll and handles both VTF and standard image formats, PNG normally, resolving paths through the Source Engine VFS.
+
+The '''image://game/''' provider is the only way to load a VTF file in QML, the standard schemes do not know how to decode VTF.
+
+===How to use it===
+
+Assign the URL to the source property of a QML Image element:
+
+<source lang=qml>
+Image {  
+    source: "image://game/ui/images/nav-logo.png"  
+}
+</source>
+
+Example can be found in '''component-header.qml''' around lines 159-167.
+
+===URL format===
+<source lang=qml>
+image://game/<vfs-path>  
+</source>
+
+The path after '''image://game/''' is the same VFS path that would be passed to the Source Engine file system - it can point inside VPK archives, game directories, etc.
+
+===All usage patterns in the codebase===
+
+Static PNG UI images:
+<source lang=qml>
+Image { source: "image://game/ui/images/unavailable.png" }
+</source>
+
+Example can be found in '''routeview-unavailable.qml''' around lines 5-12.
+
+
+VTF background textures (wallpaper):
+<source lang=qml>
+background01: "image://game/materials/console/background01.vtf"
+</source>
+
+Example can be found in '''component-wallpaper.qml''' around lines 21-25.
+
+
+Dynamic path construction (map thumbnails):
+<source lang=qml>
+source: [  
+    "image://game/materials/vgui/multiplayer/map_backgrounds/",  
+    model.value,  
+    "_0_widescreen.vtf"  
+].join('')
+</source>
+
+Example can be found in '''component-optionslist-input-map.qml''' around lines 86-95.
+
+
+State-based image switching (hover effect):
+<source lang=qml>
+source: discordLinkArea.containsMouse  
+    ? "image://game/ui/images/discord-purple.png"  
+    : "image://game/ui/images/discord-white.png"
+</source>
+
+Example can be found in '''component-footer.qml''' around lines 143-144.
+
+
+Asynchronous loading (for heavy textures, avoids blocking the UI thread):
+<source lang=qml>
+Image {  
+    source: "image://game/materials/vgui/multiplayer/map_backgrounds/"+map+"_0_widescreen_16_10.vtf"  
+    asynchronous: true  
+}
+</source>
+
+
+Example can be found in '''routeview-join.qml''' around lines 249-257.
+
+
+Path stored in a data model (save game thumbnail):
+<source lang=qml>
+thumbnailUrl: "image://game/ui/images/newSaveThumbnail.png"
+</source>
+
+Example can be found in '''routeview-savegame.qml''' at line 55.
+
+==BlackMesaEngine QML Type==
+Provides access to the underlying Black Mesa engine interface, enabling communication between the QML UI and the game engine.
+
+Import Statement: {{code|import CrowbarCollective 1.0}}. Singleton instance: {{code|BlackMesaEngine}}.
+
+===Detailed Description===
+'''BlackMesaEngine''' is a singleton type exposed to the QML environment that provides a public set of functions for interacting with the Source engine running Black Mesa. It allows modders and UI developers to execute engine commands, retrieve game state, interact with [[Steam]], manage saves, manipulate [[ConVar|console variables]] (ConVars or Cvar for short), query input bindings, and receive engine/UI signals without needing to write C++ code.
+
+Because it is registered as a singleton, there is no need to instantiate it. Simply use {{code|BlackMesaEngine.<methodName>()}} after importing the module.
+
+Code example:
+<source lang=qml>
+import CrowbarCollective 1.0
+
+Component.onCompleted: {
+    console.log(BlackMesaEngine.getLevelName())
+}
+</source>
+
+===Enumerations===
+====KeyCode====
+Defines the numeric codes for keyboard keys, mouse buttons, generic joysticks, XBox 360 controllers, and Steam controllers. Used for input binding and key capturing.
+
+The full list is large and maps to the engine button code table. For UI code, prefer converting between key names and key codes with {{code|keyButtonStringToCode()}} and {{code|keyButtonCodeToString()}}.
+
+Example names include '''KEY_ESCAPE''', '''KEY_ENTER''', '''KEY_SPACE''', '''KEY_UP''', '''KEY_DOWN''', '''MOUSE_LEFT''', '''MOUSE_RIGHT''', and '''KEY_XBUTTON_A'''.
+
+===Data Object Schemas===
+====MultiplayerModel Object====
+Returned by {{code|getAvailableMultiplayerModels()}}. Represents one the [[Playermodel manifest.txt|default multiplayer characters]].
+
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| name
+| string
+| Display name of the multiplayer character.
+|-
+| model
+| string
+| Engine model path/name.
+|-
+| skins
+| int
+| Number of available skins for this model.
+|-
+|}
+
+====CurrentMultiplayerModel Object====
+Returned by {{code|getCurrentMultiplayerModel()}}. Represents selected multiplayer character from [[Character_presets.txt|character presets]].
+
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| name
+| string
+| Display name of the currently selected multiplayer character.
+|-
+| model
+| string
+| Engine model path/name.
+|-
+| skins
+| int
+| Currently selected skin index from the player configuration.
+|-
+|}
+
+====VideoMode Object====
+Returned by {{code|listVideoModes()}}. Represents a screen resolution.
+
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| width
+| int
+| Display width in pixels.
+|-
+| height
+| int
+| Display height in pixels.
+|-
+| bitsPerPixel
+| int
+| Display color depth.
+|-
+| refreshRate
+| int
+| Refresh rate in Hz.
+|-
+|}
+
+====AchievementEntry Object====
+Returned by {{code|listAchievementEntries()}}. Represents a single '''Steam''' achievement and its progress state.
+
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| name
+| string
+| Localization key for the achievement's name.
+|-
+| description
+| string
+| The localized description of the achievement.
+|-
+| count
+| int
+| Current progress towards the achievement.
+|-
+| goal
+| int
+| The target value required for unlock.
+|-
+| isAchieved
+| bool
+| The target value required for unlock.
+|-
+| shouldHideUntilAchieved
+| bool
+| If true, details should be hidden until unlocked.
+|-
+| imageSourceUnlocked
+| url
+| Path to the achievement's colored icon.
+|-
+| imageSourceLocked
+| url
+| Path to the achievement's grayscale icon.
+|-
+|}
+
+====SaveEntry Object====
+Returned by {{code|listSaveEntries()}}. Represents a single saved game file.
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| name
+| string
+| The save file base name without extension.
+|-
+| comment
+| string
+| The descriptive label/comment stored with the save.
+|-
+| map
+| string
+| The internal map name (e.g., ''bm_c1a1a'').
+|-
+| chapter
+| string
+| Chapter identifier string (e.g., ''Chapter1'' or a localization key like ''#bms_...'').
+|-
+| elapsedSeconds
+| int
+| Total playtime in seconds.
+|-
+| dateCreated
+| date
+| The timestamp of the save creation, in local time.
+|-
+| fileSize
+| int
+| The size of the save file in bytes.
+|-
+| thumbnailUrl
+| url
+| A path to the screenshot captured during the save.
+|-
+|}
+
+====ConsoleMessage Object====
+Provided by the {{code|gameConsoleMessagesReceived}} signal.
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| text
+| string
+| The log message string.
+|-
+| color
+| color
+| The RGBA color associated with the message.
+|-
+|}
+	
+====CampaignEntry Object====
+Returned by {{code|listCampaignEntries()}}. Represents a single game campaign (either official or a workshop addon). Campaign entries are loaded from JSON files in the '''campaigns/''' directory. The table represents default version from '''blackmesa.json'''.
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| isOfficial
+| bool
+| True for the official Black Mesa campaign entry. This is the only hardcoded value, given by the UI, true if the file is ''campaigns/blackmesa.json''.
+|-
+| title
+| string
+| Localization key for the campaign name. Added by the JSON file.
+|-
+| imageSource
+| url
+| URL/path to the campaign thumbnail. Added by the JSON file.
+|-
+| chapters
+| plain data objects
+| Array of chapter objects. Added by the JSON file.
+|-
+| description
+| string
+| Campaign description. Added by the JSON file.
+|-
+| author
+| string
+| Campaign author name. Added by the JSON file.
+|-
+| url
+| string
+| Campaign URL (e.g., a workshop item link). Added by the JSON file.
+|-
+|}
+
+Every chapter from '''chapters''' array contains their own parameters. The table represents default version from '''blackmesa.json'''.
+
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| levelName
+| string
+| The internal map name to load by this chapter (e.g., ''bm_c1a1a''). Added by the JSON file.
+|-
+| title
+| string
+| Localization key for the chapter's display name. Added by the JSON file.
+|-
+| imageSource
+| url
+| URL/path to the chapter's thumbnail image. Added by the JSON file.
+|-
+| description
+| string
+| Chapter description. Added by the JSON file.
+|-
+|}
+
+====ServerEntry Object====
+Provided by the {{code|matchmakingServerResponded}} signal. Represents a single multiplayer game server, an engine-provided object describing one server browser result. Treat it as a QML var object and read only the fields exposed by the current game build.
+{| class="standard-table"
+|- style="box-shadow:0 1px #525252; position:sticky; z-index:10; top:-1px"
+! Key
+! Type
+! Description
+|-
+| name
+| string
+| Server display name.
+|-
+| connectionAddressString
+| string
+| "IP:port" string used to connect (e.g., '''193.104.68.59:27032''').
+|-
+| map
+| string
+| The internal current map name running on the server (e.g., ''dm_crossfire'').
+|-
+| ping
+| int
+| Latency in milliseconds.
+|-
+| playersOnServerCurrently
+| int
+| Current number of human players.
+|-
+| playersOnServerMaximum
+| int
+| Maximum player slots.
+|-
+| botsOnServerCurrently
+| int
+| Number of bots on the server.
+|-
+| gameDirectory
+| string
+| Game directory name (e.g., ''bms'').
+|-
+| gameDescription
+| string
+| "Human-readable" game directory name string (e.g., ''Black Mesa'').
+|-
+| isPasswordProtected
+| bool
+| Whether the server requires a password to join.
+|-
+| isSecure
+| bool
+| Whether the server is VAC-secured.
+|-
+| steamApplicationId
+| int
+| Steam App ID of the game.
+|-
+| lastPlayed
+| date
+| ISO 8601 date string representing the last time the player connected to that server. Only valid for '''Favorites'''/'''History''' server lists.
+|-
+|}
+
+One property is not from the engine but injected by the UI at runtime: in '''routeview-join.qml''', ''serverEntry.lan'' (bool type) is set to 1 for LAN servers and 0 for Internet servers before the entry is appended to the list ('''routeview-join.qml''' around lines 62-74).
+
+===Methods===
+====Execution & Commands====
+*{{code|void executeServerCommand(string commandString)}} - executes a command directly on the server.
+*{{code|void executeClientCommand(string commandString)}} - executes a client-side engine command.
+*{{code|void executeClientCommandUnrestricted(string commandString)}} - executes a client-side engine command, bypassing standard restriction checks. Use only when a UI feature specifically requires unrestricted command execution.
+
+====Game & Level State====
+*{{code|bool isInGame()}} - returns true if the player is actively in a level.
+*{{code|bool isInMultiplayerMode()}} - returns true if the current session is a multiplayer game.
+*{{code|bool isLevelMainMenuBackground()}} - returns true if the currently loaded map is the main menu background map.
+*{{code|string getGameDirectory()}} - returns the name of the game directory (e.g., ''bms'').
+*{{code|string getChapterName()}} - returns the name of the current chapter.
+*{{code|string getMainMenuBackgroundName()}} - returns the name of the map currently used for the main menu background.
+*{{code|string getLevelName()}} - returns the full name of the current level.
+*{{code|string getLevelNameShort()}} - returns the shortened file name of the current level.
+*{{code|int getLevelVersion()}} - returns the BSP version of the current level.
+
+====Multiplayer Configuration====
+*{{code|void writeHostMultiplayerSettings()}} - saves current host configuration for multiplayer to disk.
+*{{code|list getAvailableMultiplayerModels()}} - returns a list of '''MultiplayerModel''' objects representing available multiplayer characters.
+*{{code|var getCurrentMultiplayerModel()}} - returns a '''CurrentMultiplayerModel''' object describing the current player's chosen multiplayer model and selected skin.
+*{{code|int getCurrentMultiplayerModelSkins(string model)}} - returns the total number of skins available for the specified model path.
+*{{code|void setCurrentMultiplayerModel(string model, int skin)}} - applies the selected model path and skin index to the current player.
+*{{code|int getMaxClients()}} - returns the maximum number of clients allowed on the current server/session.
+
+====Input & Bindings====
+*{{code|string keyLookupBinding(string bindingString)}} - looks up the key currently bound to the specified action string.
+*{{code|string keyLookupBindingExact(string bindingString)}} - looks up the exact key bound to the specified action string.
+*{{code|string keyBindingForKey(int keyButtonCode)}} - returns the action string currently bound to the provided '''KeyCode'''.
+*{{code|string keyButtonCodeToString(int keyButtonCode)}} - converts a KeyCode integer to its string representation.
+*{{code|int keyButtonStringToCode(string keyButtonString)}} - converts a string representation of a key to its '''KeyCode''' integer.
+*{{code|void requestKeyCapture()}} - requests that the UI capture the next key press. Once captured, emits the {{code|keyCaptured(int keyButtonCode)}} signal.
+*{{code|void grabInputForGameUI()}} - forces the engine to direct input to the game UI.
+*{{code|void releaseInputFromGameUI()}} - releases input focus from the game UI back to the engine/gameplay.
+
+====Console Variables====
+*{{code|real getConsoleVariableAsFloat(string variableName)}} - returns the console variable value as a floating-point number.
+*{{code|int getConsoleVariableAsInt(string variableName)}} - returns the console variable value as an integer.
+*{{code|bool getConsoleVariableAsBoolean(string variableName)}} - returns the console variable value as a boolean.
+*{{code|vector3d getConsoleVariableAsVector(string variableName)}} - returns the console variable value as a vector3d.
+*{{code|string getConsoleVariableAsString(string variableName)}} - returns the console variable value as a string.
+*{{code|void setConsoleVariableAsFloat(string variableName, real value)}} - sets the console variable value from a floating-point number.
+*{{code|void setConsoleVariableAsInt(string variableName, int value)}} - sets the console variable value from an integer.
+*{{code|void setConsoleVariableAsBoolean(string variableName, bool value)}} - sets the console variable value from a boolean.
+*{{code|void setConsoleVariableAsVector(string variableName, vector3d value)}} - sets the console variable value from a vector3d.
+*{{code|void setConsoleVariableAsString(string variableName, string value)}} - sets the console variable value from a string.
+
+====Console Output & Autocomplete====
+*{{code|list listConsoleAutocompleteEntries(string partialCommandString)}} - returns a list of commands that match the partial string for autocomplete.
+*{{code|list listConsoleSuggestions(string commandString, string partialArgumentString)}} - returns a list of argument suggestions for the specified command.
+*{{code|void printConsoleMessage(color color, string text)}} - adds colored text to the UI console message queue. Multi-line text is split into separate message entries.
+
+====Video & Rendering====
+*{{code|bool isWindowedMode()}} - returns true if the game is running in a window.
+*{{code|bool isWindowedBorderlessMode()}} - returns true if the game is running in windowed borderless mode.
+*{{code|list listVideoModes()}} - returns a list of supported display modes for the current hardware. Each object contains width, height, bitsPerPixel, and refreshRate.
+
+====Audio====
+*{{code|void playSoundEffect(string soundName)}} - plays a UI or game sound effect globally.
+*{{code|int playAmbientSound(string soundName, real volume)}} - plays an ambient sound effect and returns its unique ID.
+*{{code|bool isSoundStillPlaying(int soundId)}} - returns true if the sound associated with soundId is currently active.
+*{{code|void stopSoundById(int soundId)}} - halts the sound associated with soundId.
+*{{code|void setVolumeById(int soundId, real volume)}} - adjusts the volume of an actively playing sound by its ID.
+
+====File System & Localization====
+*{{code|string getLocalizedString(string stringId)}} - translates a localization token (e.g., ''#GameUI_Quit'') into the current language string. If the string does not start with #, it is returned unchanged.
+*{{code|bool isDirectory(string fileName, string pathId)}} - checks if the specified path resolves to a directory.
+*{{code|list listDirectoryEntries(string wildCard, string pathId)}} - lists directory contents based on a wildcard search.
+*{{code|string readAllText(string fileName, string pathId)}} - reads the full contents of a file and returns it as a UTF-8 string. Returns an empty string if the file cannot be opened.
+
+====Save System & Campaigns====
+*{{code|list listSaveEntries()}} - returns a list of SaveEntry objects representing current save files.
+*{{code|bool removeSaveEntry(string saveEntryName)}} - deletes a specific save file.
+*{{code|list listCampaignEntries()}} - parses JSON files in the campaigns/ directory and returns a list of available campaigns. Each returned object also includes isOfficial.
+
+====Steam & Achievements====
+*{{code|int getSteamApplicationId()}} - returns the '''Steam''' '''AppID''' for the game.
+*{{code|void activateSteamOverlay(string dialogName)}} - opens the '''Steam Overlay''' to a specific dialog page.
+*{{code|void activateSteamOverlayToWebPage(string url)}} - opens the '''Steam Overlay''' web browser to the specified URL.
+*{{code|list listAchievementEntries()}} - returns a list of '''AchievementEntry''' objects, containing details such as name, description, count, goal, '''isAchieved''', '''shouldHideUntilAchieved''', '''imageSourceUnlocked''' and '''imageSourceLocked'''.
+
+====Matchmaking & Servers====
+Following methods that returns a string value are methods that return a query handle (a string), the handle can be used to match responses to the query that triggered them.
+*{{code|string requestFavoritesServerList()}} -  Player's Steam-favorited servers.
+*{{code|string requestFriendsServerList()}} - Servers where Steam friends are currently playing.
+*{{code|string requestHistoryServerList()}} - Servers the player recently joined.
+*{{code|string requestInternetServerList()}} - Steam master server list.
+*{{code|string requestLANServerList()}} - Local network discovery.
+*{{code|string requestSpectatorServerList()}} - starts a server list query and returns a queryHandle string, which is used to identify responses in the matchmakingServerResponded signal.
+*{{code|void matchmakingCancelQuery(string queryHandle)}} - cancels an active matchmaking query.
+
+====Engine Info====
+*{{code|int getEngineBuildNumber()}} - returns the engine build number.
+*{{code|string getProductVersionString()}} - returns the product version string.
+*{{code|int getClientVersion()}} - returns the client version number.
+*{{code|void setShouldUpdateProgressBar(bool shouldUpdateProgressBar)}} - sets whether the loading progress bar should be updated.
+*{{code|void setRootPanelVisibility(bool rootPanelVisibility)}} - sets root UI panel visibility.
+
+===Signals===
+*{{code|levelLoadingStarted(string levelName, bool isBackgroundLevel, bool showProgressDialog)}} - emitted when map loading begins.
+*{{code|levelLoadingFinished(bool isError, string failureReason, string extendedReason)}} - emitted when a map has finished loading or failed.
+*{{code|disconnectedFromServer()}} - emitted when the client drops connection to the server.
+*{{code|updateProgressValue(real progressValue, string statusText)}} - emitted iteratively during a map load to update loading bars.
+*{{code|gameUIActived()}} - emitted when the game UI gains focus. The spelling is intentional and matches the exposed API.
+*{{code|gameUIHidden()}} - emitted when the game UI loses focus and closes.
+*{{code|keyCaptured(int keyButtonCode)}} - emitted after '''requestKeyCapture()''' is called and the user presses a key. '''keyButtonCode''' corresponds to the '''KeyCode''' enum.
+*{{code|gameConsoleActived()}} - emitted when the developer console opens. The spelling is intentional and matches the exposed API.
+*{{code|gameConsoleHidden()}} - emitted when the developer console closes.
+*{{code|gameConsoleCleared()}} - emitted when the developer console output is cleared.
+*{{code|gameConsoleMessagesReceived(list messagesList)}} - emitted periodically with a queue of console logs. Each object contains color and text.
+*{{code|matchmakingServerResponded(var serverEntry, string queryHandle)}} - emitted when a server responds during a matchmaking query.
+*{{code|matchmakingQueryCompleted(string queryHandle)}} - emitted when a matchmaking query finishes scanning.
+*{{code|navigationSourceChanged(int navigationSourceType)}} - emitted when the input device changes. Known values are 0 for keyboard/mouse, 1 for controller, and 2 for '''Steam''' controller.
