@@ -1,0 +1,249 @@
+﻿import QtQuick 2.9
+import CrowbarCollective 1.0
+
+RouteView { id: index
+    property variant lastSave
+    property bool isInGame: false
+
+    property int logoVerticalCenterOffset: Math.ceil(-80 * Theme.heightScale)
+    property int childMargin: Math.ceil(75 * Theme.widthScale)
+    property int gameNameFontSize: Math.ceil(51 * Theme.heightScale)
+
+    Component.onCompleted: {
+        lastSave = BlackMesaUtils.getSaveGames()[0];
+
+        if (isInGame) {
+            loader.sourceComponent = indexInGame
+        } else if (lastSave) {
+            loader.sourceComponent = indexContinue
+        } else {
+            loader.sourceComponent = indexNew
+        }
+    }
+
+    Loader { id: loader
+        anchors.fill: parent
+    }
+
+    Component { id: indexInGame
+        Item { id: root
+            property int logoDimension: Math.ceil(149 * Theme.heightScale)
+            property int childTopMargin: Math.ceil(25 * Theme.heightScale)
+            property int buttonTopMargin: Math.ceil(15 * Theme.heightScale)
+            property int timerTopMargin: Math.ceil(15 * Theme.heightScale)
+
+            Image { id: logo
+                source: "image://game/ui/images/logo.png"
+
+                width: parent.width
+                height: root.logoDimension
+
+                fillMode: Image.PreserveAspectFit
+                horizontalAlignment: Image.AlignLeft
+
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: logoVerticalCenterOffset
+            }
+
+            Text { id: gameNameText
+                anchors.top: logo.bottom
+                anchors.topMargin: root.childTopMargin
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                text: BlackMesaEngine.getLocalizedString(BlackMesaEngine.getChapterName())
+                font.capitalization: Font.MixedCase
+                font.pixelSize: index.gameNameFontSize
+                font.family: Theme.fonts.regular
+                font.letterSpacing: 5
+                color: Theme.colors.buttonText
+            }
+
+            Text { id: timerText
+                color: Theme.colors.buttonText
+                anchors.top: gameNameText.bottom
+                anchors.topMargin: root.timerTopMargin
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                font.family: Theme.fonts.light
+                font.capitalization: Font.AllUppercase
+                font.pixelSize: Math.ceil(21 * Theme.heightScale)
+            }
+
+            Row {
+                width: parent.width
+                anchors.top: timerText.bottom
+                anchors.topMargin: root.buttonTopMargin
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                spacing: 5
+
+                CTAButton {
+                    objectName: "ui--navigation:button:level_2"
+                    disabled: appRoot.isInMultiplayerMode
+                    text: L10n.strings.buttons.quicksave
+                    callback: function() {
+                        index.saveGameRequest("quick");
+                    }
+                    onClicked: {
+                        index.saveGameRequest("quick");
+                    }
+                }
+
+                CTAButton {
+                    objectName: "ui--navigation:button:level_2"
+                    disabled: appRoot.isInMultiplayerMode
+                    text: L10n.strings.buttons.saveGame
+                    callback: function() {
+                        index.routeRequest(Routes.savegame.name);
+                    }
+                    onClicked: {
+                        index.routeRequest(Routes.savegame.name);
+                    }
+                }
+
+                CTAButton {
+                    objectName: "ui--navigation:button:level_2"
+                    text: L10n.strings.buttons.disconnect
+                    callback: function() {
+                        BlackMesaEngine.executeClientCommandUnrestricted("disconnect");
+                        isInGame = false;
+                        loader.sourceComponent = indexContinue;
+                        index.routeRequest(Routes.index.name);
+                    }
+                    onClicked: {
+                        BlackMesaEngine.executeClientCommandUnrestricted("disconnect");
+                        isInGame = false;
+                        loader.sourceComponent = indexContinue;
+                        index.routeRequest(Routes.index.name);
+                    }
+                }
+            }
+
+            Timer {
+                interval: 1000
+                running: true
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: {
+                    timerText.text = Theme.getDateTimeString(new Date());
+                }
+            }
+        }
+    }
+
+    Component { id: indexNew
+        Item { id: root
+            property int logoDimension: Math.ceil(168 * Theme.heightScale)
+            property int buttonTopMargin: Math.ceil(25 * Theme.heightScale)
+
+            Image { id: logo
+                source: "image://game/ui/images/logo-new.png"
+
+                width: parent.width
+                height: root.logoDimension
+
+                fillMode: Image.PreserveAspectFit
+                horizontalAlignment: Image.AlignLeft
+
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: logoVerticalCenterOffset
+            }
+
+            CTAButton {
+                objectName: "ui--navigation:button:level_2"
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                anchors.topMargin: root.buttonTopMargin
+                anchors.top: logo.bottom
+                text: L10n.strings.buttons.startGame
+                callback: function() { index.routeRequest(Routes.newgame.name) }
+                onClicked: index.routeRequest(Routes.newgame.name)
+            }
+        }
+    }
+
+    Component { id: indexContinue
+        Item { id: root
+            property int logoDimension: Math.ceil(149 * Theme.heightScale)
+            property int childTopMargin: Math.ceil(25 * Theme.heightScale)
+
+            Image { id: logo
+                source: "image://game/ui/images/logo.png"
+
+                width: parent.width
+                height: root.logoDimension
+
+                fillMode: Image.PreserveAspectFit
+                horizontalAlignment: Image.AlignLeft
+
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: logoVerticalCenterOffset
+            }
+
+            Item { id: continueGame
+                visible: lastSave && !isInGame
+                anchors.top: logo.bottom
+                anchors.topMargin: root.childTopMargin
+                anchors.left: parent.left
+                anchors.leftMargin: childMargin
+
+                property int saveTypeFontSize: Math.ceil(13 * Theme.heightScale)
+                property int dateTextFontSize: Math.ceil(20 * Theme.heightScale)
+                property int buttonTopMargin: Math.ceil(10 * Theme.heightScale)
+
+                Item {
+                    Text { id: saveTypeText
+                        text: {
+                            var labels = L10n.strings.labels;
+
+                            switch (lastSave.type) {
+                            case 'auto': return labels.autoSave;
+                            case 'quick': return labels.quickSave;
+                            case 'manual': return labels.manualSave;
+                            }
+                        }
+                        font.pixelSize: continueGame.saveTypeFontSize
+                        font.capitalization: Font.AllUppercase
+                        font.family: Theme.fonts.light
+                        color: Theme.colors.buttonText
+                    }
+
+                    Text { id: gameNameText
+                        anchors.top: saveTypeText.bottom
+                        anchors.topMargin: -5
+                        text: lastSave.chapterName
+                        font.capitalization: Font.Capitalize
+                        font.pixelSize: index.gameNameFontSize
+                        font.family: Theme.fonts.regular
+                        font.letterSpacing: 5
+                        color: Theme.colors.buttonText
+                    }
+
+                    Text { id: dateText
+                        anchors.top: gameNameText.bottom
+                        anchors.topMargin: -2
+                        text: Theme.getDateTimeString(lastSave.dateCreated)
+                        font.pixelSize: continueGame.dateTextFontSize
+                        font.family: Theme.fonts.light
+                        color: Theme.colors.buttonText
+                    }
+
+                    CTAButton {
+                        objectName: "ui--navigation:button:level_2"
+                        anchors.topMargin: continueGame.buttonTopMargin
+                        anchors.top: dateText.bottom
+                        text: L10n.strings.buttons.resume
+                        callback: function() { index.loadGameRequest(lastSave) }
+                        onClicked: index.loadGameRequest(lastSave)
+                    }
+                }
+            }
+        }
+    }
+}

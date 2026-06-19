@@ -1,0 +1,17 @@
+import QtQuick 2.9
+
+BindingList {
+    commands: [
+        InputBindingsManager.getBindingComponentConfig('save quick'),
+        InputBindingsManager.getBindingComponentConfig('load quick'),
+        InputBindingsManager.getBindingComponentConfig('toggleconsole'),
+        InputBindingsManager.getBindingComponentConfig('incrementvar closecaption 0 1 1'),
+        InputBindingsManager.getBindingComponentConfig('+moveup'),
+        InputBindingsManager.getBindingComponentConfig('+movedown'),
+        InputBindingsManager.getBindingComponentConfig('+lookup'),
+        InputBindingsManager.getBindingComponentConfig('+lookdown'),
+        InputBindingsManager.getBindingComponentConfig('+left'),
+        InputBindingsManager.getBindingComponentConfig('+right')
+    ]
+}
+

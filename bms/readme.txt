@@ -1,0 +1,1 @@
+This is the core game, "Black Mesa" UI, other UIs are based on it, as they are mod versions of the core game.
