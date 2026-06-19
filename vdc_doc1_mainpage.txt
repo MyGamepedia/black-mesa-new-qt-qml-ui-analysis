@@ -1,3 +1,4 @@
+{{bms topicon}}
 {{TabsBar|main=Black Mesa Qt UI}}
 [[File:black_mesa_qtui.jpg|thumb|right|Qt UI in the game.]]
 On August 1st, {{bms|4}} introduced new UI in {{xe|4}} (working on it started  in early 2018), using {{WP|Qt}} framework, known amoung the community as the '''New UI'''. The main goals with implementing it was:
@@ -10,7 +11,7 @@ On August 1st, {{bms|4}} introduced new UI in {{xe|4}} (working on it started  i
 The legacy VGUI is still in the game and can be enabled via {{code|-oldgameui}} launch option, but it is not supported by [[Crowbar Collective]], meaning bugs and issues won't get fixes or improvements. The new UI doesn't replace the all existing VGUI elements (e.g. spectator menu), instead, it runs on to of the game, and if runs, the game disables all game menu elements for VGUI.
 
 ==Implementation==
-The UI itself is a separate application (subsystem), binary file '''BlackMesaUI''', it runs on top of the game itself and receives signals from there, it knows practically nothing about the engine, the engine practically non-existent for it, only the interfaces are awake and that's all. The interfaces themselves do not hint at the existence of types from the engine in the UI and the same is true for the engine - it also does not suspect the existence of Qt. When UI is active, console command {{command|gamemenucommand}} doesn't exists, the GameMenu button assigned commands are disabled, as well as every dialog that uses a promptable command to be open, so this part of [[VGUI]] never can run, while the rest can (e.g. team select menu). If z syntax error appear in the QML code, the UI won't be displayed.
+The UI itself is a separate application (subsystem), binary file '''BlackMesaUI''', it runs on top of the game itself and receives signals from there, it knows practically nothing about the engine, the engine practically non-existent for it, only the interfaces are awake and that's all. The interfaces themselves do not hint at the existence of types from the engine in the UI and the same is true for the engine - it also does not suspect the existence of Qt. When UI is active, console command {{command|gamemenucommand}} doesn't exists, the GameMenu button assigned commands are disabled, as well as every dialog that uses a promptable command to be open, so this part of [[VGUI]] never can run, while the rest can (e.g. team select menu). If a syntax error appear in the QML code, the UI won't be displayed.
 
 ===Qt Version===
 The UI is made in Qt 5.9.8 and Qt Quick Application. This makes the UI totally moddable, all the logic and visuals are written in QML, the code is placed in {{code|ui}} folder. The main limitation is what the API provides from the '''BlackMesaUI''' binary and Qt from ''Black Mesa\bin\thirdparty\qt-5.9.x-windows-x86-msvc2013-angle'' folder.
@@ -94,6 +95,12 @@ The UI uses ANGLE to render, this might be the reason that causes rendering issu
 <gallery mode=packed heights=250px>
 File:Blackmesaqtui glitch2 ЭЛЬ ЧМОКИО ВЕЛИКОЛЕПНЫЙ.jpg| frame |UI flickering (image by '''ЭЛЬ ЧМОКИО ВЕЛИКОЛЕПНЫЙ''').
 File:Blackmesaqtui glitch2 Edo2642.jpg | frame |UI rendering glitch (image by '''Edo2642''').
+</gallery>
+
+===Doesn't scale properly with [[Engine tools]]===
+The UI isn't connected to the window scale, so it covers the entire screen, instead of convering the game screen. This makes it uncomfortable to use the tools, as the UI covers a part of the VGUI. The only way to workaround it is using {{code|-oldgameui}} launch option to run the game with legacy VGUI.
+<gallery mode=packed heights=250px>
+File:blackmesaqtui_glitch3.jpg| frame |Game with engine tools in window mode.
 </gallery>
 
 ==External links==
