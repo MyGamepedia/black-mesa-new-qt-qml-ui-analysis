@@ -216,9 +216,7 @@ Item {
                 router.setRoute(Routes.multiplayer.name);
             }
 
-            else if (
-            !isLoadingLevel // <-- we don't want to route to main menu if we are currently loading - this is happening in MP when map is changing: UI is suddenly activated to show progress bar.
-            && (_isInitialLoad || !appRoot.visible) ) {
+            else if ( !isLoadingLevel && !_isInitialLoad && !appRoot.visible ) {
                 // TODO: This is terrible. Fix this awful mess of cross-invokation
 
                 // GameUIActived is fired by onLevelLoadingStarted, breaking the contract of this handler.

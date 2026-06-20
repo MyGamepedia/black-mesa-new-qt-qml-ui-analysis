@@ -74,7 +74,18 @@ RouteView {
                 // isLocked: (index + 1) > newGameCarousel.officialChaptersUnlockedCount && newGameCarousel.currentlySelectedCampaign.isOfficial
                 isLocked: false
 
-                thumbnailUrl: model.imageSource
+				//mygamepedia: test of theory ''JSON can store anything'', this checks if we have altimagechance
+				//value, and if we get the chance, use alt image, used for chapter 4
+                thumbnailUrl: {  
+					if (model.altimagechance !== undefined && parseInt(model.altimagechance) > 0) {  
+						if (Math.random() * 100 < parseInt(model.altimagechance)) {  
+							return model.imageSource.replace(/\.([^.]+)$/, "_alt.$1")  
+						}  
+					}  
+					return model.imageSource  
+				}
+				
+				
                 chapterName: localizedTitle
                 chapterNumber: (index + 1)
 

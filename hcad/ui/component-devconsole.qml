@@ -283,6 +283,11 @@ Item { id: container
 
             for (i = 0; i < messagesListLength; i++) {
                 messageEntry = messagesList[i];
+		
+			//mygamepedia: this could be used as a hook for stuff you want by printing to the console	
+			//if (messageEntry.text.indexOf("^@#!_lighteditor") !== -1) {  
+			//    BlackMesaEngine.executeClientCommandUnrestricted("echo THIS IS A WIP FEATURE!!!");  
+			//}    
 
                 outputModel.append({
                     elementColor: messageEntry.color.toString(),
