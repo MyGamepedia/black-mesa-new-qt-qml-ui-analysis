@@ -1,31 +1,34 @@
 {{bms topicon}}
-{{TabsBar|main=Black Mesa Qt UI}}
-[[File:black_mesa_qtui.jpg|thumb|right|Qt UI in the game.]]
-On August 1st, {{bms|4}} introduced new UI in {{xe|4}} (working on it started  in early 2018), using {{WP|Qt}} framework, known amoung the community as the '''New UI'''. The main goals with implementing it was:
-*[[VGUI]] does not work with controllers, and due to its inherent design there's no way to make it work.
-*VGUI has deprecated design.
-*VGUI is hard to code and work with.
-*Limited VGUI modding tools without the engine, game UI, and client binary code changes.
-*Optimization.
+
+{{TabsBar|main=Qt}}
+
+[[File:black mesa qtui.jpg|thumb|right|Qt UI in the game.]]
+
+{{For|about=the framework|documentation on the game's API and QML code|[[Qt (Black Mesa)/Docs|Black Mesa Qt Documentation]]|}}
+
+On August 1st, {{bms|4}} introduced new UI in {{xe|4}} (working on it started  in early 2018), using [[Qt|Qt framework]], known amoung the community as the '''New UI'''. The main goals with implementing it was:
+* [[VGUI]] does not work with controllers, and due to its inherent design there's no way to make it work.
+* VGUI has deprecated design.
+* VGUI is hard to code and work with.
+* Limited VGUI modding tools without the engine, game UI, and client binary code changes.
+* Optimization.
 
 The legacy VGUI is still in the game and can be enabled via {{code|-oldgameui}} launch option, but it is not supported by [[Crowbar Collective]], meaning bugs and issues won't get fixes or improvements. The new UI doesn't replace the all existing VGUI elements (e.g. spectator menu), instead, it runs on to of the game, and if runs, the game disables all game menu elements for VGUI.
 
-==Implementation==
+== Implementation ==
 The UI itself is a separate application (subsystem), binary file '''BlackMesaUI''', it runs on top of the game itself and receives signals from there, it knows practically nothing about the engine, the engine practically non-existent for it, only the interfaces are awake and that's all. The interfaces themselves do not hint at the existence of types from the engine in the UI and the same is true for the engine - it also does not suspect the existence of Qt. When UI is active, console command {{command|gamemenucommand}} doesn't exists, the GameMenu button assigned commands are disabled, as well as every dialog that uses a promptable command to be open, so this part of [[VGUI]] never can run, while the rest can (e.g. team select menu). If a syntax error appear in the QML code, the UI won't be displayed.
 
-===Qt Version===
-The UI is made in Qt 5.9.8 and Qt Quick Application. This makes the UI totally moddable, all the logic and visuals are written in QML, the code is placed in {{code|ui}} folder. The main limitation is what the API provides from the '''BlackMesaUI''' binary and Qt from ''Black Mesa\bin\thirdparty\qt-5.9.x-windows-x86-msvc2013-angle'' folder.
-{{confirm|Can a total conversion add custom plugins ?}}
+=== Qt Version ===
+The UI is made in Qt 5.9.8 and Qt Quick Application. This makes the UI totally moddable, all the logic and visuals are written in QML, the code is placed in {{code|ui}} folder. The main limitation is what the API provides from the '''BlackMesaUI''' binary and Qt from ''Black Mesa\bin\thirdparty\qt-5.9.x-windows-x86-msvc2013-angle'' folder. The reason behind 5.9 is because it's the last version fully compitable with [[Visual Studio]] 2013, that is used to compile the game for {{windows|4}}. Total conversions can add custom Qt plugins, because they are outside of folder with [[gameinfo.txt]].
 
-===Rendering===
-====ANGLE====
+=== Rendering ===
+==== ANGLE ====
 Because Black Mesa uses Qt 5.9 version, it doesn't use DirectX directly, instead, used '''ANGLE''' rendering layer. '''ANGLE''' (Almost Native Graphics Layer Engine) in Qt 5.9 is a layer that allows Qt to render its OpenGL ES UI via DirectX rather than the native Windows OpenGL driver. This is especially important for Qt 5 on Windows, as Qt Quick/QML in Qt 5 relied on OpenGL/OpenGL ES and OpenGL drivers on Windows have historically been less predictable than DirectX. For Qt, this looks like OpenGL ES 2.0, but '''ANGLE''' internally translates these calls to DirectX.
-{{confirm|Is '''ANGLE''' the reason why used 5.9 version and not newer ?}}
 
-====DirectX Versions====
+==== DirectX Versions ====
 If the game doesn't use DirectX Vulkan via {{code|-disabledxvk}} launch option (the default launch option in Steam UI), the UI can use two versions of DirectX. By default, it's DirectX 11 (can be used via {{code|-forceuid3d11}} launch option as well), but can also be used DirectX 9 ({{code|-forceuid3d9}} launch option). Due to the no-mixed-API restriction, if the game runs in DirectX Vulkan (via {{code|-enabledxvk}} launch option or '''DXVK''' launch option in Steam UI), Qt UI is forced to run DirectX 9, so it can be displayed.
 
-==Files Structure==
+== Files Structure ==
 All files related to the UI ({{code|qmldir.}} and '''QML''' files) are stored {{code|ui}} folder. The original game version folder also contains subfolders:
 * ''fonts'' - includes fonts used by the UI.
 * ''campaign/images'' - includes '''PNG''' images for the campaign chapter images, they are screenshots from the game with changed color correction and disable [[env_lensflare|lensflares]], except '''[[Black Mesa (Source)/Endgame|Endgame]]''' chapter (20), which uses Crowbar Collective icon on a black background.
@@ -41,30 +44,30 @@ The UI can access any game's folder.
 
 For information about all the QML files and their code, see the subpages, this includes: [[Qt_in_Black_Mesa/Black_Mesa_Core_and_Misc_QML_Files|core and misc]] files, [[Qt in Black Mesa/Black Mesa Button Prefix QML Files|button]] prefix files, [[Qt in Black Mesa/Black Mesa Component Prefix QML Files|component]] prefix files, [[Qt in Black Mesa/Black Mesa Routeview Prefix QML Files|routeview]] files.
 
-==Tips==
-===Resources===
+== Tips ==
+=== Resources ===
 For beginner friendly step by step information, use Qt tutorials on YouTube, for instant, [https://www.youtube.com/watch?v=RWd-zjclFB0&list=PLP7UmEJ9z4mpi0JXcPS0VRK-7eFAfROZI&index=1 Somco-Software] tutorial video series.
 
 For the full Qt 5.9 documentation, use [https://doc.qt.io/archives/qt-5.9/ Qt 5.9 framework documentation], it contains all the API and necessary information.
 
-For the '''BlackMesaUI''' API, read the [[Qt in Black Mesa/Black Mesa Qt UI API|subpage]], it contains all the information about data object schemas, BlackMesaEngine singleton type, enumerations, campaigns system, VFS protocol, image provider.
+For the '''BlackMesaUI''' API, read the [[Qt (Black Mesa)/Docs/API|subpage]] that contains all the information about data object schemas, BlackMesaEngine singleton type, enumerations, campaigns system, VFS protocol, image provider.
 
-To get answers to specific questions, use '''DeepWiki''' ({{WP|Devin AI}}) in [https://deepwiki.com/MyGamepedia/black-mesa-new-qt-qml-ui-analysis MyGamepedia/black-mesa-new-qt-qml-ui-analysis] repository, it will analyze the UI QML code and take a while before respond. Always use '''Deep Research''' mode for exact answers.
+To get answers to specific questions, use '''DeepWiki''' ([[wp:Devin AI|Devin AI]]) in [https://deepwiki.com/MyGamepedia/black-mesa-new-qt-qml-ui-analysis MyGamepedia/black-mesa-new-qt-qml-ui-analysis] repository, it will analyze the UI QML code and take a while before respond. Always use '''Deep Research''' mode for exact answers.
 
-===Development===
-Can be used any text editor to edit the QML code, {{WP|Qt Creator}} recommended for syntax errors highlights, just throw a file on the window. Due to luck of Black Mesa API placeholders, that could work in Qt Creator for the UI prototyping, there is no clear way to put the UI in the editor and see changes on fly in the editor, everything needs to be tested and checked in the game.
+=== Development ===
+Can be used any text editor to edit the QML code, [[wp:Qt Creator|Qt Creator]] recommended for syntax errors highlights, just throw a file on the window. Due to luck of Black Mesa API placeholders, that could work in Qt Creator for the UI prototyping, there is no clear way to put the UI in the editor and see changes on fly in the editor, everything needs to be tested and checked in the game.
 
-===Base Changes For a Total Conversion===
+=== Base Changes For a Total Conversion ===
 To change main color for the UI, go to '''theme.qml''', find property ''highlight'', change the HEX color to what feets mod them, using Google's color palette.
 
 It's very likely the total conversion won't use UI sections for workshop (to avoid breaking stuff), achievements, translators, policy, and multiplayer features (unless custom multiplayer or {{SourceCoop|4}} support planned). To remove:
 *Go to ''component-header.qml''.
 *Find and remove (or comment out) following lines:
-**{{code|append({ label: labels.multiplayer, routeName: "multiplayer" });}}
-**{{code|append({ label: labels.achievements, routeName: "achievements" });}}
-**{{code|append({ label: labels.workshop, routeName: "steamworkshop" });}}
-**{{code|append({ label: labels.policy, routeName: "policy", isEnabled: true });}}
-**{{code|append({ label: labels.translators, routeName: "translators", isEnabled: true })}}
+** {{code|append({ label: labels.multiplayer, routeName: "multiplayer" });}}
+** {{code|append({ label: labels.achievements, routeName: "achievements" });}}
+** {{code|append({ label: labels.workshop, routeName: "steamworkshop" });}}
+** {{code|append({ label: labels.policy, routeName: "policy", isEnabled: true });}}
+** {{code|append({ label: labels.translators, routeName: "translators", isEnabled: true })}}
 
 To remove multiplayer settings, go to ''routeview-game.qml'', find append with '''game_announcer''' value for key, remove (or comment out), the same for appends '''mp_multiplayer_character_model''' and '''mp_multiplayer_character_skin'''. To remove multiplayer bindings, go to ''routeview-bindings.qml'', find ListModel with id '''categoriesModel''', in categories body, remove (or comment out) multiplayer part.
 
@@ -72,7 +75,7 @@ The total conversion may won't use certain weapons, so binds in the list for suc
 
 Images used by the UI also should be edited to math the new them.
 
-===Custom Signals Via Console Output===
+=== Custom Signals Via Console Output ===
 Without API modifications, it's not possible to add custom signals for the UI to call custom logic, it's even hard to do with engine [[Server plugins|plugins]], because the '''BlackMesaUI''' reads index to define what signal it should call. However, if something can print to the console, it can be used to read message entry and compare by string. To implement such workaround, open ''component-devconsole.qml'', find onGameConsoleMessagesReceived, add to the loop something like this after the after the line that assigns a value to ''messageEntry'':
 <source lang=qml>
 			//mygamepedia: this is example, could be used as a hook for stuff you want by printing to the console, e.g. to open lights editor
@@ -82,28 +85,31 @@ Without API modifications, it's not possible to add custom signals for the UI to
 </source>
 This example will print '''THIS IS A WIP FEATURE!!!''' message to the console, once it receives ''^@#!_lighteditor'' string. The only downside, it has a delay of 100 milliseconds, this means the trick is unsuitable for anything that needs to be frame-accurate or sub-100ms response.
 
-==Bug and Limitations==
-===Black squares and checkboards during game level load===
+== Bug and Limitations ==
+=== Black squares and checkboards during game level load ===
 Seems to be UI glitch. Appears during any level load from background, this includes save load and [[background]] level load. The black void is actually what the game engine renders at the moment, normally the player supposed to see image applied on top of it.
 <gallery mode=packed heights=250px>
 File:Blackmesaqtui_glitch1_1.jpg| frame |During first background map load.
 File:Blackmesaqtui_glitch1_2.jpg| frame |During a level load.
 </gallery>
 
-===Native Linux Version Rendering Issues===
+=== Native Linux Version Rendering Issues ===
 The UI uses ANGLE to render, this might be the reason that causes rendering issues of the UI on native {{linux|4}} game build. Based on the report, different users face different problems, usually flickering. Use {{proton|4}} as a workaround, {{code|-oldgameui}} launch option also can be used to launch the game with VGUI.
 <gallery mode=packed heights=250px>
 File:Blackmesaqtui glitch2 ЭЛЬ ЧМОКИО ВЕЛИКОЛЕПНЫЙ.jpg| frame |UI flickering (image by '''ЭЛЬ ЧМОКИО ВЕЛИКОЛЕПНЫЙ''').
 File:Blackmesaqtui glitch2 Edo2642.jpg | frame |UI rendering glitch (image by '''Edo2642''').
 </gallery>
 
-===Doesn't scale properly with [[Engine tools]]===
+=== Doesn't scale properly with [[Engine tools]] ===
 The UI isn't connected to the window scale, so it covers the entire screen, instead of convering the game screen. This makes it uncomfortable to use the tools, as the UI covers a part of the VGUI. The only way to workaround it is using {{code|-oldgameui}} launch option to run the game with legacy VGUI.
 <gallery mode=packed heights=250px>
 File:blackmesaqtui_glitch3.jpg| frame |Game with engine tools in window mode.
 </gallery>
 
-==External links==
-*Official [https://doc.qt.io/archives/qt-5.9/ Qt 5.9 framework documentation]
-*[https://www.youtube.com/watch?v=RWd-zjclFB0&list=PLP7UmEJ9z4mpi0JXcPS0VRK-7eFAfROZI&index=1 Somco-Software] tutorials
-*[https://deepwiki.com/MyGamepedia/black-mesa-new-qt-qml-ui-analysis MyGamepedia/black-mesa-new-qt-qml-ui-analysis] repository on DeepWiki
+== See also ==
+* [[Qt (Black Mesa)/Docs|Black Mesa Qt Documentation]]
+
+== External links ==
+* Official [https://doc.qt.io/archives/qt-5.9/ Qt 5.9 framework documentation]
+* [https://www.youtube.com/watch?v=RWd-zjclFB0&list=PLP7UmEJ9z4mpi0JXcPS0VRK-7eFAfROZI&index=1 Somco-Software] tutorials
+* [https://deepwiki.com/MyGamepedia/black-mesa-new-qt-qml-ui-analysis MyGamepedia/black-mesa-new-qt-qml-ui-analysis] repository on DeepWiki
