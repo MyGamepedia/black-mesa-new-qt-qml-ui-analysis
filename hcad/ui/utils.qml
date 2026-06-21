@@ -4,7 +4,7 @@ import QtQuick 2.9
 import CrowbarCollective 1.0
 
 QtObject {
-    property var discordLink: "https://discord.gg/crowbarcollective";
+    property var discordLink: ""; //mygamepedia: we don't have a discord, lol
     property var globalTimer: Timer {}
 
     // Used when user open console
@@ -25,7 +25,27 @@ QtObject {
     // Saved games
     // ----------------------------
     property var savedGameNameRegex: /^(autosave|quick)\d*$/;
-
+	
+	//mygamepedia: attempts to display map name (chaptername A/B/etc)
+	function getChapterTitleFromMapName(mapName) {  
+		var campaigns = BlackMesaEngine.listCampaignEntries() || [];  
+		for (var i = 0; i < campaigns.length; i++) {  
+			var chapters = campaigns[i].chapters || [];  
+			for (var j = 0; j < chapters.length; j++) {  
+				if (chapters[j].levelName === mapName) {  
+					// Use #levelName key (e.g. #hc_t0a0), not the JSON title key  
+					return BlackMesaEngine.getLocalizedString('#' + chapters[j].levelName);  
+				}  
+			}  
+		}  
+		// Fallback for maps not in campaign JSON  
+		var fallbackKey = mapName.replace("#bms_", "#QTUI_Maps_");  
+		if (fallbackKey.charAt(0) !== '#') {  
+			fallbackKey = '#' + fallbackKey;  
+		}  
+		return BlackMesaEngine.getLocalizedString(fallbackKey);  
+	}
+	
     function getSaveGames() {
         var data = (BlackMesaEngine.listSaveEntries() || []).sort(function (a, b) {
                 return new Date(b.dateCreated) - new Date(a.dateCreated);
@@ -40,7 +60,7 @@ QtObject {
                 return {
                     savename: save.name,
                     chapter: Number((save.chapter.match(/Chapter(\d+)?/m) || [])[1] || "-1"),
-                    chapterName: L10n.getString(save.chapter.replace("#bms_", "#QTUI_Maps_")),
+                    chapterName: getChapterTitleFromMapName(save.chapter),
                     type: type,
                     dateCreated: new Date(save.dateCreated),
                     thumbnail: save.thumbnailUrl

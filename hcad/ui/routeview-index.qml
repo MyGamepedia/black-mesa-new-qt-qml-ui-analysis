@@ -38,6 +38,11 @@ RouteView { id: index
             property int childTopMargin: Math.ceil(40 * Theme.heightScale)
             property int buttonTopMargin: Math.ceil(15 * Theme.heightScale)
             property int timerTopMargin: Math.ceil(15 * Theme.heightScale)
+			property string resolvedChapterTitle: ""
+	
+			Component.onCompleted: {  
+				resolvedChapterTitle = BlackMesaUtils.getChapterTitleFromMapName(BlackMesaEngine.getChapterName());  
+			}
 
             Image { id: logo
                 source: "image://game/ui/images/logo.png"
@@ -59,7 +64,7 @@ RouteView { id: index
                 anchors.topMargin: root.childTopMargin
                 anchors.left: parent.left
                 anchors.leftMargin: childMargin
-                text: BlackMesaEngine.getLocalizedString(BlackMesaEngine.getChapterName())
+                text: root.resolvedChapterTitle //mygamepedia: use translated map name
                 font.capitalization: Font.MixedCase
                 font.pixelSize: index.gameNameFontSize
                 font.family: Theme.fonts.regular

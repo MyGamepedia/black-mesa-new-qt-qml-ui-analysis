@@ -6,18 +6,11 @@ import CrowbarCollective 1.0
 QtObject {
     property variant strings: _getStringMap()
 
-	//MyGamepedia: HACK! HACK! Add # for maps with hc_t0a
 	function getString(key) {  
 		if (!key)
 			return key;
 
-		var k = key;
-
-		if (key.startsWith("hc_t0a") && key.charAt(0) !== '#') {
-			k = '#' + key;
-		}
-
-		return BlackMesaEngine.getLocalizedString(k);  
+		return BlackMesaEngine.getLocalizedString(key);  
 	}
 
     function refreshStrings() {
