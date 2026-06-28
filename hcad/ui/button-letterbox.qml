@@ -1,5 +1,6 @@
 import QtQuick 2.9
 import CrowbarCollective 1.0
+import QtGraphicalEffects 1.0 
 
 MouseArea { id: button
     property alias text: buttonText.text
@@ -64,6 +65,18 @@ MouseArea { id: button
         anchors.centerIn: parent
         font.capitalization: Font.AllUppercase
     }
+	
+	Glow {  
+        id: textGlow  
+        anchors.fill: buttonText  
+        source: buttonText          // reference the sibling Text  
+        radius: 8  
+        samples: 17                 // 1 + radius * 2  
+        spread: 0.4  
+        color: buttonText.color     // tracks the animated color automatically  
+        cached: false               // must be false — color is animated on state change  
+        visible: mouseArea.state === "focused" || mouseArea.state === "selected"  
+    }  
 
     MouseArea { id: mouseArea
         anchors.fill: parent

@@ -1,5 +1,6 @@
 ﻿import QtQuick 2.9
 import CrowbarCollective 1.0
+import QtGraphicalEffects 1.0  
 
 
 FocusScope { id: optionRow
@@ -101,6 +102,18 @@ FocusScope { id: optionRow
 
 
     }
+	
+	Glow {  
+		anchors.fill: text  
+		source: text  
+		radius: 5  
+		samples: 11  
+		spread: 0.4  
+		color: text.color  
+		cached: false  
+		// hide during "binding" state — text is transparent then anyway  
+		visible: clicker.state === "focused" || clicker.state === "selected"  
+	}
 
     Loader { id: loader
         width: (parent.width / 2) - (128*Theme.widthScale)

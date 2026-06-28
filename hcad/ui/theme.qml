@@ -72,8 +72,11 @@ QtObject {
     readonly property QtObject sounds: QtObject {
         readonly property string buttonFocused: "common/launch_glow1.wav"
         readonly property string buttonClicked: "bms_objects/clickbeep/beep1.wav"
-        readonly property string music1: "#ui/gamestartup_1.wav" // make sure to add leading '#' in front of ambient (music) file name. (cf. CHAR_DRYMIX in snd_dma.cpp)
-        readonly property string music2: "#ui/gamestartup_2.wav" //
+		
+		//mygamepedia: i replaced orig tracks after i watched Guillermo del Toro's Pinocchio when i was working on the ui,
+		//and man, this music as sad as the movie (recommend to watch)
+        readonly property string music1: "#music/Scott_Buckley/MemoriesOfStone.mp3"
+        readonly property string music2: "#music/Scott_Buckley/MemoriesOfStone.mp3"
     }
 
     readonly property QtObject fonts: QtObject {

@@ -32,6 +32,8 @@ Item {
     property string levelLoadingFinished_FailureReason: ""
     // how much of the level has been loaded. used by footer.
     property real loadPercent: 0.0
+	//is flare editor open?
+	property bool isLensFlareEditorOpen: false
 
     // Used to properly handle fast ESC and ~ keys pressing
     //while animation of menu is still running, i.e. menu open/close state.
@@ -79,15 +81,17 @@ Item {
         }
     }
 
-    Wallpaper {
-        id: wallpaper
-        anchors.fill: parent
-        showSkrim: isInGame || router.currentRoute !== Routes.index
-        darkenSkrim: isInGame
-        suppressAnimations: isLoadingLevel
-    }
+	Wallpaper {  
+		id: wallpaper  
+		anchors.fill: parent  
+		visible: !appRoot.isLensFlareEditorOpen
+		showSkrim: !appRoot.isLensFlareEditorOpen && (isInGame || router.currentRoute !== Routes.index)  
+		darkenSkrim: isInGame  
+		suppressAnimations: isLoadingLevel || appRoot.isLensFlareEditorOpen  
+	}
 
     GridLayout {
+		visible: !appRoot.isLensFlareEditorOpen
         width: parent.width
         height: parent.height
         flow: GridLayout.TopToBottom
@@ -245,24 +249,24 @@ Item {
             }
         }
 
-        onGameUIHidden: {
-            didLoadLevel = false;
-            devConsole.state = "closed";
-            appRoot.visible = false;
-            // hide the header because the header will transition in and out when hidden, as well
-            // as fade with appRoot
-            // don't hide the footer because the footer never transitions. it will fade with appRoot.
-            header.hide = true;
-            // if the UI is being hidden because we just loaded a level, then
-            // immediately transition to empty (loading screen cut).
-            // otherwise, animate to empty (ui fade out because the user exited it)
-            router.setRoute(emptyRoute.name, didLoadLevel);
-            BlackMesaEngine.releaseInputFromGameUI();
-
-            if (BlackMesaEngine.getMaxClients() < 2 && !BlackMesaEngine.isLevelMainMenuBackground() && BlackMesaEngine.isInGame()) {
-                BlackMesaEngine.executeClientCommandUnrestricted("unpause nomsg");
-            }
-        }
+        onGameUIHidden: {  
+			didLoadLevel = false;  
+			devConsole.state = "closed";  
+			// reset editor state directly — do NOT call lensFlareEditor.hide() here  
+			// because onGameUIHidden already handles appRoot.visible and releaseInput  
+			lensFlareEditor.state = "closed";  
+			lensFlareEditor.ownedUI = false;
+			lensFlareEditor._savedShowExtras = false;  
+			appRoot.isLensFlareEditorOpen = false;  
+			appRoot.visible = false;  
+			header.hide = true;  
+			router.setRoute(emptyRoute.name, didLoadLevel);  
+			BlackMesaEngine.releaseInputFromGameUI();  
+		  
+			if (BlackMesaEngine.getMaxClients() < 2 && !BlackMesaEngine.isLevelMainMenuBackground() && BlackMesaEngine.isInGame()) {  
+				BlackMesaEngine.executeClientCommandUnrestricted("unpause nomsg");  
+			}  
+		}
 
         onLevelLoadingStarted: {
             BlackMesaEngine.executeClientCommandUnrestricted("unpause nomsg");
@@ -364,6 +368,11 @@ Item {
     DevConsole {
         id: devConsole
     }
+	
+	LensFlareEditor {
+        id: lensFlareEditor
+    }
+	
     // Alert reporting loading error failed
     Alert { id: alertLoadFailed
         titleText: BlackMesaEngine.getLocalizedString("#BlackMesaUI_Error")

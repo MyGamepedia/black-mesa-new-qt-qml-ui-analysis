@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import CrowbarCollective 1.0
+import QtGraphicalEffects 1.0  
 
 RouteView { id: bindingsView
     property int headerMargin: Math.ceil(35 * Theme.widthScale)
@@ -182,6 +183,17 @@ RouteView { id: bindingsView
                         anchors.verticalCenter: parent.verticalCenter
                         leftPadding: headerMargin
                     }
+					
+					Glow {  
+						anchors.fill: labelText  
+						source: labelText  
+						radius: 6  
+						samples: 13  
+						spread: 0.4  
+						color: labelText.color   // follows the orange highlight automatically  
+						cached: false            // color is animated via ColorAnimation  
+						visible: parent.state === "focused" || parent.state === "selected"  
+					}
 
                     states: [
                         State {

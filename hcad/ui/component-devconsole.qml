@@ -284,10 +284,13 @@ Item { id: container
             for (i = 0; i < messagesListLength; i++) {
                 messageEntry = messagesList[i];
 		
-			//mygamepedia: this could be used as a hook for stuff you want by printing to the console	
-			//if (messageEntry.text.indexOf("^@#!_lighteditor") !== -1) {  
-			//    BlackMesaEngine.executeClientCommandUnrestricted("echo THIS IS A WIP FEATURE!!!");  
-			//}    
+			//mygamepedia: this is how we open lens flare editor	
+			if (messageEntry.text.indexOf("^@#!_lensflareeditor") !== -1) {  
+				container.state = "closed";  
+				lensFlareEditor.show();  
+				// do NOT append this internal trigger message to the output  
+				continue;  
+			}      
 
                 outputModel.append({
                     elementColor: messageEntry.color.toString(),
@@ -300,9 +303,13 @@ Item { id: container
             outputModel.clear();
         }
 
-        onGameConsoleActived: {
-            container.state = "opened";
-        }
+		onGameConsoleActived: {  
+			if (appRoot.isLensFlareEditorOpen) {  
+				BlackMesaEngine.executeClientCommandUnrestricted("unpause nomsg");  
+				return;  
+			}  
+			container.state = "opened";  
+		}
 
         onGameConsoleHidden: {
             container.state = "closed";

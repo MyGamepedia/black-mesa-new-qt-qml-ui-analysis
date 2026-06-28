@@ -16,6 +16,7 @@ LetterboxButton 1.0						button-letterbox.qml
 MainNavButton 1.0						button-mainnav.qml
 
 DevConsole 1.0							component-devconsole.qml
+LensFlareEditor 1.0         			component-lensflare-editor.qml
 
 Carousel 1.0							component-carousel.qml
 CarouselItem 1.0						component-carousel-item.qml
