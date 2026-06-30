@@ -3,6 +3,7 @@ This repository is purely for making documentation for Qt User Intarface from Bl
 The main doc: https://developer.valvesoftware.com/wiki/Qt_(Black_Mesa)
 
 Notes:
+* "vcd_" prefix files are code for docs on the wiki, DeepWiki use it to have more context.
 * Folder "bin" contains DLLs purely related to the UI.
 * This repository contains multiple UI versions:
   
