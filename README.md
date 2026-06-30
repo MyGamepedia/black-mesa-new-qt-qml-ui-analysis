@@ -12,3 +12,9 @@ Notes:
   bshift - the UI from "Black Mesa: Blue Shift" modification.
   
   hcad - the UI from "Black Mesa: Hazard Course After Disaster - Restored" modification.
+
+  UIEnhanced_mod - modded bms version.
+
+  damocles - - the UI from "Black Mesa: Damocles" modification.
+
+  xen - the UI from "Black Mesa: Improved Xen" modification.
