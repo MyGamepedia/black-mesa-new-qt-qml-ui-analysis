@@ -94,7 +94,9 @@ QtObject {
 
                 resetAllDefaults: getString("#QTUI_Buttons_ResetAllDefaults"),
                 editBinding: getString("#QTUI_Buttons_EditBinding"),
-                clearBinding: getString("#QTUI_Buttons_ClearBinding")
+                clearBinding: getString("#QTUI_Buttons_ClearBinding"),
+				
+				gotIt: getString("#QTUI_Buttons_GotIt")
             }),
 
             menus: Object.freeze({
@@ -142,7 +144,8 @@ QtObject {
                 resetAllDefaultsWarning: getString("#QTUI_Header_ResetAllDefaultsWarning"),
                 overwriteSaveConfirmation: getString("#QTUI_Header_OverwriteSaveConfirmation"),
                 deleteSaveConfirmation: getString("#QTUI_Header_DeleteSaveConfirmation"),
-                confirmBindingOverwrite: getString("#QTUI_Header_ConfirmBindingOverwrite")
+                confirmBindingOverwrite: getString("#QTUI_Header_ConfirmBindingOverwrite"),
+				video_hdPackWarningHeader: getString("#QTUI_Option_Video_HdPack_WarningHeader")
             }),
 
             modalMessages: Object.freeze({
@@ -152,7 +155,8 @@ QtObject {
                 overwriteSaveConfirmation: getString("#QTUI_Messages_OverwriteSaveConfirmation"),
                 bindingInstructions: getString("#QTUI_Messages_BindingInstructions"),
                 confirmBindingOverwrite: getString("#QTUI_Messages_ConfirmBindingOverwrite"),
-                saveBeforeQuit: getString("#QTUI_Messages_SaveBeforeQuit")
+                saveBeforeQuit: getString("#QTUI_Messages_SaveBeforeQuit"),
+				video_hdPackWarningTitle: getString("#QTUI_Option_Video_HdPack_WarningTitle")
             }),
 
             options: Object.freeze({
@@ -252,8 +256,8 @@ QtObject {
                     video_radioactiveNoise: getString("#QTUI_Option_Video_RadioactiveNoise"),
                     video_gamma: getString("#QTUI_Option_Video_Gamma"),
                     video_unlockHighendUnsupported: getString("#QTUI_Option_Video_UnlockHighendUnsupported"),
-					video_hdPack: getString("#QTUI_Option_Video_HdPack"), //mygamepedia: hd pack title
                     video_warningHeader: getString("#QTUI_Option_Video_WarningHeader"),
+					video_hdPack: getString("#QTUI_Option_Video_HdPack"),
 
 					video_desc_help_HDPACK: getString("#QTUI_Option_Video_Desc_Help_HDPACK"), //mygamepedia: hd pack help desc
                     video_desc_help_RESOLUTION: getString("#QTUI_Option_Video_Desc_Help_RESOLUTION"),

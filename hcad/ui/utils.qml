@@ -10,6 +10,8 @@ QtObject {
     // Used when user open console
     property bool disableUINavigation: false;
 
+	property bool hdPackRestartWarningShown: false;
+
     // Delay function implementation ( Qt does not have own setTimeout func like in Javascript )
     function setTimeout(cb, delay) {
         globalTimer.interval = delay;

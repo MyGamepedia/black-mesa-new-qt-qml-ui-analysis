@@ -7,7 +7,9 @@ RouteView { id: videoOptionsView
     property int costFontSize: Math.ceil(16 * Theme.widthScale)
 
     property bool headerWarningVisibility: false
-
+	
+	property bool hdPackPendingChange: false
+	
     function onRouteWillChange(newRouteName) {
         if (!blockingRouteName && videoOptions.hasPendingChanges) {
             blockingRouteName = newRouteName;
@@ -194,8 +196,11 @@ RouteView { id: videoOptionsView
                 // set overall quality to 'custom', because one of the dependency settings was
                 // just manually set
                 setValue(models.video_quality, '5');
-            }
-            updateHeaderWarningVisibility(); // better to update the Warning count after each setting change
+			} else if (model.key === "video_hdPack") {  
+				hdPackPendingChange = true;  
+			}
+			
+			updateHeaderWarningVisibility(); // better to update the Warning count after each setting change
         }
 
         function setAdvancedSettingsState(settings) {
@@ -430,11 +435,9 @@ RouteView { id: videoOptionsView
 			//mygamepedia: this toggles hd pack 
 			function video_hdPack(value) {  
 				if (value === "1") {  
-					BlackMesaEngine.executeClientCommandUnrestricted(  
-						'sv_game_hd 1; con_logfile game_hd.txt; echo "If this file exists on disk HD content will be loaded."; con_logfile "";'  
-					);  
+					BlackMesaEngine.executeClientCommandUnrestricted('sv_hcad_game_hd 1; sv_hcad_gamehd_create');  
 				} else {  
-					BlackMesaEngine.executeClientCommandUnrestricted('sv_game_hd 0; remove_game_hd');  
+					BlackMesaEngine.executeClientCommandUnrestricted('sv_hcad_game_hd 0; sv_hcad_gamehd_remove');  
 				}
 			}
         }
@@ -619,7 +622,7 @@ RouteView { id: videoOptionsView
 			
 			//mygamepedia: hd pack state
 			function video_hdPack() {  
-				return BlackMesaEngine.getConsoleVariableAsInt("sv_game_hd").toString();  
+				return BlackMesaEngine.getConsoleVariableAsInt("sv_hcad_game_hd").toString();  
 			}
 
         }
@@ -1255,12 +1258,16 @@ RouteView { id: videoOptionsView
             CTAButton {
                 objectName: "ui:btn:action[apply]"
                 text: L10n.strings.buttons.apply
-                onClicked: {
-                    videoOptions.flushPendingChanges();
-                    videoOptionsView.routeRequest(blockingRouteName);
-                    // Reload game after video settings change
-					BlackMesaEngine.executeClientCommandUnrestricted("savereloadaftersettingschange");
-                }
+				onClicked: {  
+					if (hdPackPendingChange && !BlackMesaUtils.hdPackRestartWarningShown) {  
+						BlackMesaUtils.hdPackRestartWarningShown = true;  
+						hdPackRestartAlert.show();  
+					} else {  
+						videoOptions.flushPendingChanges();  
+						videoOptionsView.routeRequest(blockingRouteName);  
+						BlackMesaEngine.executeClientCommandUnrestricted("savereloadaftersettingschange");  
+					}  
+				}
             }
 
             WarningButton {
@@ -1281,4 +1288,21 @@ RouteView { id: videoOptionsView
             }
         }
     }
+	
+	Alert { id: hdPackRestartAlert  
+		titleText: L10n.strings.headers.video_hdPackWarningHeader  
+		messageText: L10n.strings.modalMessages.video_hdPackWarningTitle  
+	  
+		buttons: VisualItemModel {  
+			CTAButton {  
+				objectName: "ui:btn:action[apply]"
+				text: L10n.strings.buttons.gotIt  
+				onClicked: {  
+					hdPackPendingChange = false;  
+					videoOptions.flushPendingChanges();  
+					hdPackRestartAlert.hide();  
+				}  
+			}  
+		}  
+	}
 }

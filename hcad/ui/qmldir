@@ -17,6 +17,7 @@ MainNavButton 1.0						button-mainnav.qml
 
 DevConsole 1.0							component-devconsole.qml
 LensFlareEditor 1.0         			component-lensflare-editor.qml
+ProfileWidget 1.0    					component-profile.qml
 
 Carousel 1.0							component-carousel.qml
 CarouselItem 1.0						component-carousel-item.qml
@@ -38,4 +39,4 @@ OptionsListRow 1.0						component-optionslist-row.qml
 VerticalScrollBar 1.0					component-scrollbar-vertical.qml
 BindingList 1.0							component-binding.qml
 BindingCell 1.0							component-optionslist-input-bindingcell.qml
-MenuNavGuide 1.0                       component-menu-navigation-guide.qml
+MenuNavGuide 1.0                       	component-menu-navigation-guide.qml

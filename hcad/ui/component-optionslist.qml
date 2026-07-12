@@ -272,7 +272,13 @@ Rectangle { id: optionsView
                 disabled: !hasPendingChanges
                 text: L10n.strings.buttons.applyChanges
                 onClicked: {
-                    flushPendingChanges();
+					if (hdPackPendingChange && !BlackMesaUtils.hdPackRestartWarningShown) {  
+						BlackMesaUtils.hdPackRestartWarningShown = true;  
+						hdPackRestartAlert.show();  
+					} else {  
+						videoOptions.flushPendingChanges();  
+						BlackMesaEngine.executeClientCommandUnrestricted("savereloadaftersettingschange");  
+					}
                     if ( reloadPageAfterApplyChanges ) { // if reload page is needed ...
                         router.setRoute(router.currentRoute.name.toString(), false, true);
                         reloadPageAfterApplyChanges = true;

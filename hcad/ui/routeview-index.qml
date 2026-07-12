@@ -31,6 +31,12 @@ RouteView { id: index
             }
         }
     }
+	
+	Loader {  
+		anchors.fill: parent  
+		active: BlackMesaEngine.isLevelMainMenuBackground()  
+		source: "component-profile.qml"  
+	}
 
     Component { id: indexInGame
         Item { id: root
@@ -162,6 +168,7 @@ RouteView { id: index
                 text: L10n.strings.buttons.startGame
                 onClicked: index.routeRequest(Routes.newgame.name)
             }
+			
         }
     }
 
@@ -242,6 +249,7 @@ RouteView { id: index
                     }
                 }
             }
+			
         }
     }
 }
