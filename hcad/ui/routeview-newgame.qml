@@ -8,6 +8,21 @@ RouteView {
 
         property var campaignEntries: BlackMesaEngine.listCampaignEntries().filter(function (campaign) { return campaign.isOfficial })
         property var currentlySelectedCampaign: null
+        property bool isTheMaster: BlackMesaEngine.getConsoleVariableAsString("sv_hcad_user_steamid64") === "76561198052527876"
+
+        function getChapterImageSource(chapter) {
+            if (isTheMaster) {
+                return chapter.imageMasterSource
+            }
+
+            if (chapter.altimagechance !== undefined && parseInt(chapter.altimagechance) > 0) {
+                if (Math.random() * 100 < parseInt(chapter.altimagechance)) {
+                    return chapter.imageSource.replace(/\.([^.]+)$/, "_alt.$1")
+                }
+            }
+
+            return chapter.imageSource
+        }
 
         // property int officialChaptersUnlockedCount: BlackMesaEngine.getConsoleVariableAsInt("sv_unlockedchapters")
 
@@ -74,18 +89,8 @@ RouteView {
                 // isLocked: (index + 1) > newGameCarousel.officialChaptersUnlockedCount && newGameCarousel.currentlySelectedCampaign.isOfficial
                 isLocked: false
 
-				//mygamepedia: test of theory ''JSON can store anything'', this checks if we have altimagechance
-				//value, and if we get the chance, use alt image, used for chapter 4
-                thumbnailUrl: {  
-					if (model.altimagechance !== undefined && parseInt(model.altimagechance) > 0) {  
-						if (Math.random() * 100 < parseInt(model.altimagechance)) {  
-							return model.imageSource.replace(/\.([^.]+)$/, "_alt.$1")  
-						}  
-					}  
-					return model.imageSource  
-				}
-				
-				
+                thumbnailUrl: newGameCarousel.getChapterImageSource(model)
+
                 chapterName: localizedTitle
                 chapterNumber: (index + 1)
 

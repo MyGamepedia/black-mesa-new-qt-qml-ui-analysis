@@ -9,25 +9,30 @@
             "title": "#BMS_Chapter1_Title",
             "description": "",
             "imageSource": "image://game/ui/campaign/images/chapter1.png",
+			"imageMasterSource": "image://game/ui/campaign/images/chapter1_code.png",
             "levelName": "hc_t0a0"
         },
         {
             "title": "#BMS_Chapter2_Title",
             "description": "",
             "imageSource": "image://game/ui/campaign/images/chapter2.png",
+			"imageMasterSource": "image://game/ui/campaign/images/chapter2_code.png",
             "levelName": "hc_t0a0a"
         },
         {
             "title": "#BMS_Chapter3_Title",
             "description": "",
             "imageSource": "image://game/ui/campaign/images/chapter3.png",
+			"imageMasterSource": "image://game/ui/campaign/images/chapter3_code.png",
             "levelName": "hc_t0a2"
         },
         {
             "title": "#BMS_Chapter4_Title",
             "description": "",
             "imageSource": "image://game/ui/campaign/images/chapter4.png",
-            "levelName": "hc_t0a3"
+			"imageMasterSource": "image://game/ui/campaign/images/chapter4_code.png",
+            "levelName": "hc_t0a3",
+			"altimagechance": "50"
         }
     ]
 }
