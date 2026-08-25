@@ -16,12 +16,13 @@ Item { id: editorRoot
     state: "closed"  
   
     // ── Static data ──────────────────────────────────────────────────────────  
-    readonly property var styleNames: [  
-        "Normal", "Flicker A", "Slow, strong pulse", "Candle A",  
-        "Fast strobe", "Gentle pulse", "Flicker B", "Candle B",  
-        "Candle C", "Slow strobe", "Fluorescent flicker",  
-        "Slow pulse, noblack", "Underwater"  
-    ]  
+    readonly property var styleNames: [
+        "Normal (0)", "Flicker A (1)", "Slow, strong pulse (2)",
+        "Candle A (3)", "Fast strobe (4)", "Gentle pulse (5)",
+        "Flicker B (6)", "Candle B (7)", "Candle C (8)",
+        "Slow strobe (9)", "Fluorescent flicker (10)",
+        "Slow pulse, noblack (11)", "Underwater (12)"
+    ]
     readonly property var functionOptions: ["DISK", "BOW", "DISKH", "RAY"]  
     //readonly property var functionParamCount: ({ "DISK": 3, "BOW": 1, "DISKH": 4, "RAY": 2 })  
   
@@ -37,6 +38,7 @@ Item { id: editorRoot
 	property real   hsv_value:      1.0  
 	property bool   _updatingColor: false
     property int    currentStyle:    0  
+    property string currentAngleZ:    "0" // preserved without a visible Z field
 	property bool ownedUI: false
 	//show grid and left side glow?
 	property bool _savedShowExtras: false
@@ -136,6 +138,60 @@ Item { id: editorRoot
         return result;
     }
 
+    function normalizedFlareNumber(value) {
+        var valueText = (value === undefined || value === null)
+                ? ""
+                : value.toString().trim();
+
+        if (!/^[+-]?\d+$/.test(valueText))
+            return 1;
+
+        var number = parseInt(valueText, 10);
+        return (number >= 1 && number <= 20) ? number : 1;
+    }
+
+    function setFlareNumber(value) {
+        if (!componentReady)
+            return;
+
+        var number = normalizedFlareNumber(value);
+        numField.text = number.toString();
+        BlackMesaEngine.setConsoleVariableAsInt(
+            "sv_hcad_mle_flare_num", number);
+        copyTimer.restart();
+    }
+
+    function selectFlareFunction(index) {
+        if (isLoading || !componentReady
+                || index < 0 || index >= functionOptions.length) {
+            return;
+        }
+
+        functionIndex = index;
+        BlackMesaEngine.setConsoleVariableAsString(
+            "sv_hcad_mle_flare_function", functionOptions[index]);
+    }
+    function applyTexture(textureName) {
+        if (isLoading || !componentReady)
+            return;
+
+        // DISK is also the visual fallback for an empty function. Materialize
+        // that selection before changing the texture so the final recreation
+        // receives a real function and its three parameters.
+        if (functionIndex === 0) {
+            BlackMesaEngine.setConsoleVariableAsString(
+                "sv_hcad_mle_flare_parameters",
+                compactFloatText(param1Field.text, "1") + " "
+                + compactFloatText(param2Field.text, "10") + " "
+                + compactFloatText(param3Field.text, "10"));
+            BlackMesaEngine.setConsoleVariableAsString(
+                "sv_hcad_mle_flare_function", "DISK");
+        }
+
+        BlackMesaEngine.setConsoleVariableAsString(
+            "sv_hcad_mle_flare_texture", textureName);
+    }
+
     // ── Convar helpers ────────────────────────────────────────────────────────  
     function applyParams() {  
         if (isLoading || !componentReady) return; 
@@ -156,7 +212,7 @@ Item { id: editorRoot
 	function applyAngles() {  
 		if (isLoading || !componentReady) return;  
 		BlackMesaEngine.setConsoleVariableAsString("sv_hcad_mle_flare_angles",  
-			ang1Field.text + " " + ang2Field.text + " " + ang3Field.text);  
+			ang1Field.text + " " + currentAngleZ + " " + ang3Field.text);
 	} 
   
     function copyCurrentFlareElement() {
@@ -276,6 +332,12 @@ Item { id: editorRoot
                 || typedIndex === oldIndex) {
             indexField.text = newIndex.toString();
         }
+
+        // Recreating an env_lensflare can assign it a different entity index.
+        // The overlay is a snapshot, so rebuild it before the old selected
+        // entry can turn into a clickable ghost circle.
+        if (editorRoot.state === "opened")
+            flaresOverlay.beginFlareUpdate();
     }
 
     function loadAllFromCvars() {  
@@ -286,7 +348,7 @@ Item { id: editorRoot
   
         // num  
         var n = BlackMesaEngine.getConsoleVariableAsInt("sv_hcad_mle_flare_num");  
-        if (n < 1) n = 1; if (n > 20) n = 20;  
+        if (n < 1 || n > 20) n = 1;
         numField.text = n.toString();  
   
         // color  
@@ -349,7 +411,7 @@ Item { id: editorRoot
         // angles  
         var ap = BlackMesaEngine.getConsoleVariableAsString("sv_hcad_mle_flare_angles").split(" ");  
         ang1Field.text = compactFloatText(ap[0], "0");  
-        ang2Field.text = compactFloatText(ap[1], "0");  
+        currentAngleZ = compactFloatText(ap[1], "0");
         ang3Field.text = compactFloatText(ap[2], "0");  
   
         isLoading = false;  
@@ -531,6 +593,7 @@ Item { id: editorRoot
     Flickable { id: contentArea  
         anchors.left: parent.left  
         anchors.right: parent.right  
+        anchors.rightMargin: Math.ceil(16 * Theme.widthScale)
         anchors.top: editorHeader.bottom  
         anchors.bottom: parent.bottom  
         anchors.topMargin: Math.ceil(2 * Theme.heightScale)  
@@ -538,8 +601,9 @@ Item { id: editorRoot
         contentWidth: width  
         contentHeight: mainColumn.implicitHeight + Math.ceil(8 * Theme.heightScale)  
         clip: true  
+        contentY: 0
+        interactive: false
         boundsBehavior: Flickable.StopAtBounds  
-        ScrollBar.vertical: VerticalScrollBar {}  
   
         Column { id: mainColumn  
             x: Math.ceil(6 * Theme.widthScale)  
@@ -616,10 +680,8 @@ Item { id: editorRoot
 								font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs }  
 							MouseArea { id: numDecMouse; anchors.fill: parent; hoverEnabled: true  
 								onClicked: {  
-									var v = Math.max(1, parseInt(numField.text) - 1);  
-									numField.text = v.toString();  
-									BlackMesaEngine.setConsoleVariableAsInt("sv_hcad_mle_flare_num", v);  
-									editorRoot.loadAllFromCvars();  
+									var current = editorRoot.normalizedFlareNumber(numField.text);
+									editorRoot.setFlareNumber(current > 1 ? current - 1 : 1);
 								}  
 							}  
 						}  
@@ -630,17 +692,8 @@ Item { id: editorRoot
 							font.family: Theme.fonts.devConsole  
 							font.pixelSize: mainColumn.fs  
 							background: Rectangle { color: Theme.colors.modalBackground }  
-							validator: IntValidator { bottom: 1; top: 20 }
 							selectByMouse: true  
-							onAccepted: {  
-								if (!componentReady) return;  
-								var v = parseInt(text);  
-								if (isNaN(v)) v = 1;  
-								if (v < 1)  v = 1;  
-								if (v > 20) v = 20;  
-								text = v;  
-								BlackMesaEngine.setConsoleVariableAsInt("sv_hcad_mle_flare_num", v);  
-							}
+							onAccepted: editorRoot.setFlareNumber(text)
 						}
 						Rectangle {  
 							width: mainColumn.aw; height: parent.height  
@@ -649,10 +702,9 @@ Item { id: editorRoot
 								font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs }  
 							MouseArea { id: numIncMouse; anchors.fill: parent; hoverEnabled: true  
 								onClicked: {  
-									var v = Math.min(20, parseInt(numField.text) + 1);  
-									numField.text = v.toString();  
-									BlackMesaEngine.setConsoleVariableAsInt("sv_hcad_mle_flare_num", v);  
-									editorRoot.loadAllFromCvars();  
+									var current = editorRoot.normalizedFlareNumber(numField.text);
+									editorRoot.setFlareNumber(current >= 1
+										? Math.min(20, current + 1) : 1);
 								}  
 							}  
 						}  
@@ -874,60 +926,51 @@ Item { id: editorRoot
 						}  
 					}
 					  
-					// ── Function ──────────────────────────────────────────────────────  
-					Row {  
-						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
-						Text {  
-							width: mainColumn.lw; height: parent.height  
-							text: "Function:"; color: Theme.colors.text  
-							font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs  
-							verticalAlignment: Text.AlignVCenter  
-						}  
-						Rectangle {  
-							width: mainColumn.aw; height: parent.height  
-							color: fnDecMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground  
-							opacity: editorRoot.functionIndex > 0 ? 1.0 : 0.3  
-							Text { anchors.centerIn: parent; text: "<"; color: Theme.colors.text  
-								font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs }  
-							MouseArea { id: fnDecMouse; anchors.fill: parent; hoverEnabled: true  
-								onClicked: {  
-									if (editorRoot.functionIndex > 0) {  
-										editorRoot.functionIndex--;  
-										BlackMesaEngine.setConsoleVariableAsString("sv_hcad_mle_flare_function", editorRoot.currentFunction);  
-									}  
-								}  
-							}  
-						}  
-						Text {  
-							width: Math.ceil(60 * Theme.widthScale); height: parent.height  
-							text: editorRoot.currentFunction; color: Theme.colors.highlight  
-							font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs  
-							horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter  
-						}  
-						Rectangle {  
-							width: mainColumn.aw; height: parent.height  
-							color: fnIncMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground  
-							opacity: editorRoot.functionIndex < editorRoot.functionOptions.length - 1 ? 1.0 : 0.3  
-							Text { anchors.centerIn: parent; text: ">"; color: Theme.colors.text  
-								font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs }  
-							MouseArea { id: fnIncMouse; anchors.fill: parent; hoverEnabled: true  
-								onClicked: {  
-									if (editorRoot.functionIndex < editorRoot.functionOptions.length - 1) {  
-										editorRoot.functionIndex++;  
-										BlackMesaEngine.setConsoleVariableAsString("sv_hcad_mle_flare_function", editorRoot.currentFunction);  
-									}  
-								}  
-							}  
-						}  
-						Text {  
-							height: parent.height; text: "(DISK=3p  BOW=1p  DISKH=4p  RAY=2p)"  
-							color: Theme.colors.dimmedText; font.family: Theme.fonts.regular  
-							font.pixelSize: Math.ceil(10 * Theme.heightScale)  
-							verticalAlignment: Text.AlignVCenter  
-						}  
-					}  
-		  
-					// ── Parameters ────────────────────────────────────────────────────  
+                    // ── Function ──────────────────────────────────────────────────────
+                    Row {
+                        spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh
+                        Text {
+                            width: mainColumn.lw; height: parent.height
+                            text: "Function:"; color: Theme.colors.text
+                            font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        Repeater {
+                            model: editorRoot.functionOptions
+
+                            delegate: Rectangle {
+                                id: functionButton
+                                property int optionIndex: index
+                                property string optionName: modelData
+
+                                width: Math.ceil(70 * Theme.widthScale)
+                                height: mainColumn.fh
+                                color: editorRoot.functionIndex === optionIndex
+                                       ? Theme.colors.highlight
+                                       : Theme.colors.modalBackground
+                                border.color: editorRoot.functionIndex === optionIndex
+                                              ? Theme.colors.highlight
+                                              : Theme.colors.dimmedText
+                                border.width: 1
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: functionButton.optionName
+                                    color: Theme.colors.text
+                                    font.family: Theme.fonts.bold
+                                    font.pixelSize: mainColumn.fs
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: editorRoot.selectFlareFunction(
+                                        functionButton.optionIndex)
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Parameters ────────────────────────────────────────────────────
 					Row {  
 						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
 						Text {  
@@ -1089,40 +1132,59 @@ Item { id: editorRoot
 						}  
 					}  
 		  
-					// ── Texture ───────────────────────────────────────────────────────  
-					Row {  
-						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
-						Text {  
-							width: mainColumn.lw; height: parent.height  
-							text: "Texture:"; color: Theme.colors.text  
-							font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs  
-							verticalAlignment: Text.AlignVCenter  
-						}  
-						TextField { id: textureField  
-							width: Math.ceil(250 * Theme.widthScale); height: parent.height  
-							text: "effects/lensflare/spot"; color: Theme.colors.text  
-							font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs  
-							background: Rectangle { color: Theme.colors.modalBackground }  
-							selectByMouse: true  
-							onAccepted: BlackMesaEngine.setConsoleVariableAsString("sv_hcad_mle_flare_texture", text)  
-						}  
-						Rectangle {  
-							width: Math.ceil(70 * Theme.widthScale); height: parent.height  
-							color: browseMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground  
-							border.color: Theme.colors.dimmedText; border.width: 1  
-							Text {  
-								anchors.centerIn: parent; text: "Browse..."  
-								color: Theme.colors.text; font.family: Theme.fonts.regular  
-								font.pixelSize: mainColumn.fs  
-							}  
-							MouseArea { id: browseMouse  
-								anchors.fill: parent; hoverEnabled: true  
-								onClicked: textureBrowserOverlay.open()  
-							}  
-						} 
-					}  
-		  
-					// ── Type ──────────────────────────────────────────────────────────  
+                    // ── Texture ───────────────────────────────────────────────────────
+                    Row {
+                        spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh
+                        Text {
+                            width: mainColumn.lw; height: parent.height
+                            text: "Texture:"; color: Theme.colors.text
+                            font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        TextField { id: textureField
+                            width: mainColumn.fw * 3
+                                   + Math.ceil(10 * Theme.widthScale)
+                            height: parent.height
+                            text: "effects/lensflare/spot"; color: Theme.colors.text
+                            font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs
+                            background: Rectangle { color: Theme.colors.modalBackground }
+                            selectByMouse: true
+                            onAccepted: editorRoot.applyTexture(text)
+                        }
+                        Rectangle {
+                            width: Math.ceil(70 * Theme.widthScale); height: parent.height
+                            color: browseMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground
+                            border.color: Theme.colors.dimmedText; border.width: 1
+                            Text {
+                                anchors.centerIn: parent; text: "Browse..."
+                                color: Theme.colors.text; font.family: Theme.fonts.regular
+                                font.pixelSize: mainColumn.fs
+                            }
+                            MouseArea { id: browseMouse
+                                anchors.fill: parent; hoverEnabled: true
+                                onClicked: textureBrowserOverlay.open()
+                            }
+                        }
+                        Rectangle {
+                            width: Math.ceil(26 * Theme.widthScale); height: parent.height
+                            color: clearTextureMouse.containsMouse ? "#e03030" : "#9c2020"
+                            border.color: "#ff5a5a"; border.width: 1
+                            Text {
+                                anchors.centerIn: parent; text: "X"
+                                color: "#ffffff"; font.family: Theme.fonts.bold
+                                font.pixelSize: mainColumn.fs
+                            }
+                            MouseArea { id: clearTextureMouse
+                                anchors.fill: parent; hoverEnabled: true
+                                onClicked: {
+                                    textureField.text = "";
+                                    editorRoot.applyTexture("");
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Type ──────────────────────────────────────────────────────────
 					Row {  
 						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
 						Text {  
@@ -1187,59 +1249,125 @@ Item { id: editorRoot
 						}  
 					}  
 		  
-					// ── Style ─────────────────────────────────────────────────────────  
-					Row {  
-						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
-						Text {  
-							width: mainColumn.lw; height: parent.height  
-							text: "Style:"; color: Theme.colors.text  
-							font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs  
-							verticalAlignment: Text.AlignVCenter  
-						}  
-						Rectangle {  
-							width: mainColumn.aw; height: parent.height  
-							color: styleDecMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground  
-							opacity: editorRoot.currentStyle > 0 ? 1.0 : 0.3  
-							Text { anchors.centerIn: parent; text: "<"; color: Theme.colors.text  
-								font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs }  
-							MouseArea { id: styleDecMouse; anchors.fill: parent; hoverEnabled: true  
-								onClicked: {  
-									if (editorRoot.currentStyle > 0) {  
-										editorRoot.currentStyle--;  
-										BlackMesaEngine.setConsoleVariableAsInt("sv_hcad_mle_flare_style", editorRoot.currentStyle);  
-									}  
-								}  
-							}  
-						}  
-						Text {  
-							width: Math.ceil(30 * Theme.widthScale); height: parent.height  
-							text: editorRoot.currentStyle.toString()  
-							color: Theme.colors.highlight; font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs  
-							horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter  
-						}  
-						Rectangle {  
-							width: mainColumn.aw; height: parent.height  
-							color: styleIncMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground  
-							opacity: editorRoot.currentStyle < 12 ? 1.0 : 0.3  
-							Text { anchors.centerIn: parent; text: ">"; color: Theme.colors.text  
-								font.family: Theme.fonts.bold; font.pixelSize: mainColumn.fs }  
-							MouseArea { id: styleIncMouse; anchors.fill: parent; hoverEnabled: true  
-								onClicked: {  
-									if (editorRoot.currentStyle < 12) {  
-										editorRoot.currentStyle++;  
-										BlackMesaEngine.setConsoleVariableAsInt("sv_hcad_mle_flare_style", editorRoot.currentStyle);  
-									}  
-								}  
-							}  
-						}  
-						Text {  
-							height: parent.height  
-							text: editorRoot.styleNames[editorRoot.currentStyle] || ""  
-							color: Theme.colors.dimmedText; font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs  
-							verticalAlignment: Text.AlignVCenter  
-						}  
-					}  
-		  
+                    // ── Style ─────────────────────────────────────────────────────────
+                    Row {
+                        spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh
+                        Text {
+                            width: mainColumn.lw; height: parent.height
+                            text: "Style:"; color: Theme.colors.text
+                            font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        ComboBox {
+                            id: styleCombo
+                            width: mainColumn.fw * 2
+                                   + Math.ceil(5 * Theme.widthScale)
+                            height: parent.height
+                            model: editorRoot.styleNames
+                            currentIndex: editorRoot.currentStyle
+                            leftPadding: Math.ceil(6 * Theme.widthScale)
+                            rightPadding: Math.ceil(20 * Theme.widthScale)
+
+                            contentItem: Text {
+                                text: styleCombo.displayText
+                                color: Theme.colors.text
+                                font.family: Theme.fonts.regular
+                                font.pixelSize: Math.ceil(10 * Theme.heightScale)
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+
+                            indicator: Text {
+                                anchors.right: parent.right
+                                anchors.rightMargin: Math.ceil(6 * Theme.widthScale)
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "▼"
+                                color: Theme.colors.text
+                                font.family: Theme.fonts.regular
+                                font.pixelSize: Math.ceil(9 * Theme.heightScale)
+                            }
+
+                            background: Rectangle {
+                                color: styleCombo.pressed
+                                       ? Theme.colors.highlight
+                                       : Theme.colors.modalBackground
+                                border.color: Theme.colors.dimmedText
+                                border.width: 1
+                            }
+
+                            popup: Popup {
+                                y: styleCombo.height
+                                width: styleCombo.width
+                                height: editorRoot.styleNames.length
+                                        * mainColumn.fh + padding * 2
+                                padding: 1
+
+                                contentItem: ListView {
+                                    id: styleList
+                                    clip: true
+                                    verticalLayoutDirection: ListView.TopToBottom
+                                    implicitWidth: styleCombo.width - 2
+                                    implicitHeight: contentHeight
+                                    model: editorRoot.styleNames
+
+                                    delegate: Rectangle {
+                                        id: styleOption
+                                        width: styleList.width
+                                        height: mainColumn.fh
+                                        color: styleOptionMouse.containsMouse
+                                               || index === editorRoot.currentStyle
+                                               ? Theme.colors.highlight
+                                               : Theme.colors.modalBackground
+                                        border.color: Theme.colors.dimmedText
+                                        border.width: 1
+
+                                        Text {
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.leftMargin: Math.ceil(
+                                                5 * Theme.widthScale)
+                                            anchors.rightMargin: Math.ceil(
+                                                3 * Theme.widthScale)
+                                            text: editorRoot.styleNames[index]
+                                            color: Theme.colors.text
+                                            font.family: Theme.fonts.regular
+                                            font.pixelSize: Math.ceil(
+                                                10 * Theme.heightScale)
+                                            verticalAlignment: Text.AlignVCenter
+                                            elide: Text.ElideRight
+                                        }
+
+                                        MouseArea {
+                                            id: styleOptionMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                editorRoot.currentStyle = index;
+                                                BlackMesaEngine.setConsoleVariableAsInt(
+                                                    "sv_hcad_mle_flare_style", index);
+                                                styleCombo.popup.close();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                background: Rectangle {
+                                    color: Theme.colors.modalBackground
+                                    border.color: Theme.colors.dimmedText
+                                    border.width: 1
+                                }
+                            }
+
+                            onActivated: {
+                                editorRoot.currentStyle = index;
+                                BlackMesaEngine.setConsoleVariableAsInt(
+                                    "sv_hcad_mle_flare_style", index);
+                            }
+                        }
+                    }
+
 					// ── Glow Proxy Size ───────────────────────────────────────────────  
 					Row {  
 						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
@@ -1266,62 +1394,394 @@ Item { id: editorRoot
 						}  
 					}  
 		  
-					// ── Angles ────────────────────────────────────────────────────────  
-					Row {  
-						spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh  
-						Text {  
-							width: mainColumn.lw; height: parent.height  
-							text: "Angles (Y Z X):"; color: Theme.colors.text  
-							font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs  
-							verticalAlignment: Text.AlignVCenter  
-						}  
-						TextField { id: ang1Field  
-							width: mainColumn.fw; height: parent.height; text: "0"; color: Theme.colors.text  
-							font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs  
-							enabled: editorRoot.flareType === 1
-							opacity: enabled ? 1.0 : 0.3
-							background: Rectangle { color: Theme.colors.modalBackground }  
-							validator: DoubleValidator {
+                    // ── Angles ────────────────────────────────────────────────────────
+                    Row {
+                        spacing: Math.ceil(5 * Theme.widthScale)
+                        height: mainColumn.fh
+
+                        Text {
+                            width: mainColumn.lw; height: parent.height
+                            text: "Angles (Y X):"; color: Theme.colors.text
+                            font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        TextField { id: ang1Field
+                            width: mainColumn.fw; height: parent.height; text: "0"; color: Theme.colors.text
+                            font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs
+                            enabled: editorRoot.flareType === 1
+                            opacity: enabled ? 1.0 : 0.3
+                            background: Rectangle { color: Theme.colors.modalBackground }
+                            validator: DoubleValidator {
                                 locale: "C"
                                 notation: DoubleValidator.StandardNotation
                             }
-							selectByMouse: true  
-							onEditingFinished: text = editorRoot.compactFloatText(text, "0")  
-							onTextChanged: editorRoot.applyAngles()  
-						}  
-						TextField { id: ang2Field  
-							width: mainColumn.fw; height: parent.height; text: "0"; color: Theme.colors.text  
-							font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs  
-							enabled: editorRoot.flareType === 1
-							opacity: enabled ? 1.0 : 0.3
-							background: Rectangle { color: Theme.colors.modalBackground }  
-							validator: DoubleValidator {
+                            selectByMouse: true
+                            onEditingFinished: text = editorRoot.compactFloatText(text, "0")
+                            onTextChanged: editorRoot.applyAngles()
+                        }
+                        TextField { id: ang3Field
+                            width: mainColumn.fw; height: parent.height; text: "0"; color: Theme.colors.text
+                            font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs
+                            enabled: editorRoot.flareType === 1
+                            opacity: enabled ? 1.0 : 0.3
+                            background: Rectangle { color: Theme.colors.modalBackground }
+                            validator: DoubleValidator {
                                 locale: "C"
                                 notation: DoubleValidator.StandardNotation
                             }
-							selectByMouse: true  
-							onEditingFinished: text = editorRoot.compactFloatText(text, "0")  
-							onTextChanged: editorRoot.applyAngles()  
-						}  
-						TextField { id: ang3Field  
-							width: mainColumn.fw; height: parent.height; text: "0"; color: Theme.colors.text  
-							font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs
-							enabled: editorRoot.flareType === 1
-							opacity: enabled ? 1.0 : 0.3
-							background: Rectangle { color: Theme.colors.modalBackground }  
-							validator: DoubleValidator {
-                                locale: "C"
-                                notation: DoubleValidator.StandardNotation
+                            selectByMouse: true
+                            onEditingFinished: text = editorRoot.compactFloatText(text, "0")
+                            onTextChanged: editorRoot.applyAngles()
+                        }
+
+                        // Keep the row at its original height. The visual gizmo
+                        // extends upward into the unused right side of prior rows.
+                        Item {
+                            width: Math.max(0, mainColumn.width
+                                - mainColumn.lw - mainColumn.fw * 2
+                                - Math.ceil(15 * Theme.widthScale))
+                            height: parent.height
+
+                            Item {
+                                id: rotationGizmo
+                                anchors.left: parent.left
+                                anchors.bottom: parent.bottom
+                                width: Math.ceil(140 * Theme.widthScale)
+                                height: mainColumn.fh * 5 + mainColumn.spacing * 4
+                                enabled: editorRoot.flareType === 1
+                                opacity: enabled ? 1.0 : 0.3
+
+                                property real pitchAngle: isNaN(parseFloat(ang1Field.text))
+                                        ? 0.0 : parseFloat(ang1Field.text)
+                                property real yawAngle: isNaN(parseFloat(editorRoot.currentAngleZ))
+                                        ? 0.0 : parseFloat(editorRoot.currentAngleZ)
+                                property real rollAngle: isNaN(parseFloat(ang3Field.text))
+                                        ? 0.0 : parseFloat(ang3Field.text)
+                                property int dragRing: -1
+                                property real dragLastPointerAngle: 0.0
+                                property real dragAccumulatedDelta: 0.0
+                                property real dragStartValue: 0.0
+                                readonly property real axisLength: Math.min(width, height) * 0.21
+                                readonly property real outerRingRadius: Math.min(width, height) * 0.40
+                                readonly property real innerRingRadius: Math.min(width, height) * 0.30
+
+                                function rotatedAxis(axisIndex) {
+                                    var x = axisIndex === 0 ? 1.0 : 0.0;
+                                    var y = axisIndex === 1 ? 1.0 : 0.0;
+                                    var z = axisIndex === 2 ? 1.0 : 0.0;
+
+                                    var pitch = pitchAngle * Math.PI / 180.0;
+                                    var yaw = yawAngle * Math.PI / 180.0;
+                                    var roll = rollAngle * Math.PI / 180.0;
+
+                                    var cr = Math.cos(roll), sr = Math.sin(roll);
+                                    var cp = Math.cos(pitch), sp = Math.sin(pitch);
+                                    var cy = Math.cos(yaw), sy = Math.sin(yaw);
+
+                                    // Roll around X, pitch around Y, then yaw around Z.
+                                    var x1 = x;
+                                    var y1 = y * cr - z * sr;
+                                    var z1 = y * sr + z * cr;
+
+                                    var x2 = x1 * cp + z1 * sp;
+                                    var y2 = y1;
+                                    var z2 = -x1 * sp + z1 * cp;
+
+                                    return [
+                                        x2 * cy - y2 * sy,
+                                        x2 * sy + y2 * cy,
+                                        z2
+                                    ];
+                                }
+
+                                function projectedAxis(axisIndex) {
+                                    var v = rotatedAxis(axisIndex);
+
+                                    // the red X arrow points into the camera, while
+                                    // the green Y arrow points to the screen left.
+                                    return [-v[1], v[2], v[0]];
+                                }
+
+                                function axisEndpoint(axisIndex) {
+                                    var p = projectedAxis(axisIndex);
+                                    return [
+                                        width * 0.5 + p[0] * axisLength,
+                                        height * 0.5 - p[1] * axisLength,
+                                        p[2]
+                                    ];
+                                }
+
+                                function normalizeAngle(value) {
+                                    while (value > 180.0) value -= 360.0;
+                                    while (value <= -180.0) value += 360.0;
+                                    return value;
+                                }
+
+                                function ringValue(ringIndex) {
+                                    return ringIndex === 0 ? rollAngle : pitchAngle;
+                                }
+
+                                function ringRadius(ringIndex) {
+                                    return ringIndex === 0
+                                            ? innerRingRadius : outerRingRadius;
+                                }
+
+                                function ringPhase(ringIndex) {
+                                    // X begins on the horizontal, Y on the vertical.
+                                    return ringIndex === 0 ? 0.0 : -90.0;
+                                }
+
+                                function ringHandle(ringIndex) {
+                                    var radians = (ringValue(ringIndex)
+                                            + ringPhase(ringIndex)) * Math.PI / 180.0;
+                                    var radius = ringRadius(ringIndex);
+                                    return [
+                                        width * 0.5 + Math.cos(radians) * radius,
+                                        height * 0.5 + Math.sin(radians) * radius
+                                    ];
+                                }
+
+                                function closestRing(mouseX, mouseY) {
+                                    var dx = mouseX - width * 0.5;
+                                    var dy = mouseY - height * 0.5;
+                                    var pointerRadius = Math.sqrt(dx * dx + dy * dy);
+                                    var xDistance = Math.abs(pointerRadius
+                                        - innerRingRadius);
+                                    var yDistance = Math.abs(pointerRadius
+                                        - outerRingRadius);
+                                    var tolerance = Math.max(3.5,
+                                        4.0 * Theme.widthScale);
+
+                                    if (Math.min(xDistance, yDistance) > tolerance)
+                                        return -1;
+
+                                    return xDistance <= yDistance ? 0 : 1;
+                                }
+
+                                function pointerAngle(mouseX, mouseY) {
+                                    return Math.atan2(mouseY - height * 0.5,
+                                        mouseX - width * 0.5) * 180.0 / Math.PI;
+                                }
+
+                                function setRingValue(ringIndex, value) {
+                                    var formatted = editorRoot.compactFloatText(
+                                        normalizeAngle(value).toFixed(2), "0");
+
+                                    if (ringIndex === 0)
+                                        ang3Field.text = formatted; // X
+                                    else
+                                        ang1Field.text = formatted; // Y
+                                }
+
+                                function beginRingDrag(mouseX, mouseY) {
+                                    var selectedRing = closestRing(mouseX, mouseY);
+                                    if (selectedRing < 0)
+                                        return false;
+
+                                    dragRing = selectedRing;
+                                    dragLastPointerAngle = pointerAngle(mouseX, mouseY);
+                                    dragAccumulatedDelta = 0.0;
+                                    dragStartValue = ringValue(selectedRing);
+                                    return true;
+                                }
+
+                                function updateRingDrag(mouseX, mouseY) {
+                                    if (dragRing < 0)
+                                        return;
+
+                                    var currentPointerAngle = pointerAngle(mouseX, mouseY);
+                                    var delta = currentPointerAngle
+                                        - dragLastPointerAngle;
+                                    while (delta > 180.0) delta -= 360.0;
+                                    while (delta <= -180.0) delta += 360.0;
+
+                                    dragAccumulatedDelta += delta;
+                                    dragLastPointerAngle = currentPointerAngle;
+                                    setRingValue(dragRing,
+                                        dragStartValue + dragAccumulatedDelta);
+                                }
+
+                                function endRingDrag() {
+                                    dragRing = -1;
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: rotationMouse.containsMouse
+                                           ? "#241f1f1f" : "#16141414"
+                                    border.color: Theme.colors.dimmedText
+                                    border.width: 1
+                                    radius: Math.ceil(2 * Theme.widthScale)
+                                }
+
+                                Canvas {
+                                    id: axisCanvas
+                                    anchors.fill: parent
+                                    property real shownPitch: rotationGizmo.pitchAngle
+                                    property real shownYaw: rotationGizmo.yawAngle
+                                    property real shownRoll: rotationGizmo.rollAngle
+                                    property int shownDragRing: rotationGizmo.dragRing
+                                    property bool shownEditorVisible: editorRoot.visible
+                                    property bool shownEnabled: rotationGizmo.enabled
+
+                                    onShownPitchChanged: requestPaint()
+                                    onShownYawChanged: requestPaint()
+                                    onShownRollChanged: requestPaint()
+                                    onShownDragRingChanged: requestPaint()
+                                    onShownEditorVisibleChanged: {
+                                        if (shownEditorVisible)
+                                            requestPaint();
+                                    }
+                                    onShownEnabledChanged: requestPaint()
+                                    Component.onCompleted: requestPaint()
+                                    onPaint: {
+                                        var ctx = getContext("2d");
+                                        ctx.clearRect(0, 0, width, height);
+
+                                        var centerX = width * 0.5;
+                                        var centerY = height * 0.5;
+                                        var ringColors = ["#e53935", "#43a047"];
+
+                                        // Only the X and Y rings are controls. The
+                                        // orientation arrows below are decorative.
+                                        for (var ringIndex = 0;
+                                             ringIndex < 2; ringIndex++) {
+                                            var selectedRing = ringIndex
+                                                === rotationGizmo.dragRing;
+                                            var handle = rotationGizmo.ringHandle(
+                                                ringIndex);
+
+                                            ctx.save();
+                                            ctx.globalAlpha = selectedRing ? 1.0 : 0.8;
+                                            ctx.strokeStyle = ringColors[ringIndex];
+                                            ctx.lineWidth = selectedRing ? 3.5 : 2.0;
+                                            ctx.beginPath();
+                                            ctx.arc(centerX, centerY,
+                                                rotationGizmo.ringRadius(ringIndex),
+                                                0, Math.PI * 2.0, false);
+                                            ctx.stroke();
+
+                                            ctx.fillStyle = ringColors[ringIndex];
+                                            ctx.beginPath();
+                                            ctx.arc(handle[0], handle[1],
+                                                selectedRing ? 4.5 : 3.5,
+                                                0, Math.PI * 2.0, false);
+                                            ctx.fill();
+                                            ctx.restore();
+                                        }
+
+                                        var colors = ["#e53935", "#43a047", "#1e88e5"];
+                                        var labels = ["X", "Y", "Z"];
+                                        var order = [0, 1, 2];
+                                        order.sort(function(a, b) {
+                                            return rotationGizmo.axisEndpoint(a)[2]
+                                                    - rotationGizmo.axisEndpoint(b)[2];
+                                        });
+
+                                        for (var drawIndex = 0;
+                                             drawIndex < order.length; drawIndex++) {
+                                            var axisIndex = order[drawIndex];
+                                            var endpoint = rotationGizmo.axisEndpoint(
+                                                axisIndex);
+                                            var vx = endpoint[0] - centerX;
+                                            var vy = endpoint[1] - centerY;
+                                            var lineLength = Math.sqrt(vx * vx + vy * vy);
+
+                                            // An axis pointing into the camera has no
+                                            // visible screen-space arrow.
+                                            if (lineLength < 3.0)
+                                                continue;
+
+                                            var ux = vx / lineLength;
+                                            var uy = vy / lineLength;
+                                            var headLength = 5.5;
+                                            var headWidth = 3.5;
+                                            var backX = endpoint[0] - ux * headLength;
+                                            var backY = endpoint[1] - uy * headLength;
+
+                                            ctx.save();
+                                            ctx.globalAlpha = 0.65 + 0.25
+                                                * (endpoint[2] + 1.0) * 0.5;
+                                            ctx.strokeStyle = colors[axisIndex];
+                                            ctx.fillStyle = colors[axisIndex];
+                                            ctx.lineWidth = 2.25;
+                                            ctx.lineCap = "round";
+                                            ctx.beginPath();
+                                            ctx.moveTo(centerX, centerY);
+                                            ctx.lineTo(backX, backY);
+                                            ctx.stroke();
+
+                                            ctx.beginPath();
+                                            ctx.moveTo(endpoint[0], endpoint[1]);
+                                            ctx.lineTo(backX - uy * headWidth,
+                                                       backY + ux * headWidth);
+                                            ctx.lineTo(backX + uy * headWidth,
+                                                       backY - ux * headWidth);
+                                            ctx.closePath();
+                                            ctx.fill();
+
+                                            ctx.globalAlpha = 1.0;
+                                            ctx.font = "bold "
+                                                + Math.max(8, Math.ceil(
+                                                    9 * Theme.heightScale))
+                                                + "px sans-serif";
+                                            ctx.fillText(labels[axisIndex],
+                                                endpoint[0] + ux * 4.0 - 3.0,
+                                                endpoint[1] + uy * 4.0 + 3.0);
+                                            ctx.restore();
+                                        }
+
+                                        ctx.save();
+                                        ctx.fillStyle = "#ffffff";
+                                        ctx.beginPath();
+                                        ctx.arc(centerX, centerY, 2.75, 0,
+                                                Math.PI * 2.0, false);
+                                        ctx.fill();
+                                        ctx.restore();
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: rotationMouse
+                                    anchors.fill: parent
+                                    enabled: rotationGizmo.enabled
+                                    hoverEnabled: true
+                                    acceptedButtons: Qt.LeftButton
+                                    preventStealing: true
+                                    cursorShape: pressed
+                                                 && rotationGizmo.dragRing >= 0
+                                                 ? Qt.ClosedHandCursor
+                                                 : Qt.OpenHandCursor
+                                    onPressed: {
+                                        mouse.accepted = rotationGizmo.beginRingDrag(
+                                            mouse.x, mouse.y);
+                                    }
+                                    onPositionChanged: {
+                                        if (pressed && rotationGizmo.dragRing >= 0)
+                                            rotationGizmo.updateRingDrag(
+                                                mouse.x, mouse.y);
+                                    }
+                                    onReleased: rotationGizmo.endRingDrag()
+                                    onCanceled: rotationGizmo.endRingDrag()
+                                }
                             }
-							selectByMouse: true  
-							onEditingFinished: text = editorRoot.compactFloatText(text, "0")  
-							onTextChanged: editorRoot.applyAngles()  
-						}
-					} //lockableContent column
+                        }
+                    } //lockableContent column
 				} //lockableContent
             }  
         } // Column  
     } // Flickable  
+
+    // Static replacement for the removed panel scrollbar.
+    Rectangle {
+        id: editorRightRail
+        anchors.top: editorHeader.bottom
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        width: Math.ceil(16 * Theme.widthScale)
+        color: Theme.colors.highlight
+        z: 1
+    }
 	
 	// ── Texture Browser Overlay ───────────────────────────────────────────────  
 	Item { id: textureBrowserOverlay  
@@ -1464,8 +1924,7 @@ Item { id: editorRoot
 							anchors.fill: parent; hoverEnabled: true  
 							onClicked: {  
 								textureField.text = model.textureName;  
-								BlackMesaEngine.setConsoleVariableAsString(  
-									"sv_hcad_mle_flare_texture", model.textureName);  
+								editorRoot.applyTexture(model.textureName);
 								textureBrowserOverlay.visible = false;  
 							}  
 						}  
