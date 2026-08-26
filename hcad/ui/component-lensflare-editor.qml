@@ -6,7 +6,7 @@ import CrowbarCollective 1.0
 Item { id: editorRoot  
     anchors.right: parent.right  
     width: parent.width * 0.275
-    height: parent.height * 0.455 
+    height: parent.height * 0.57
 	z: 2
   
     opacity: 0.0  
@@ -190,6 +190,46 @@ Item { id: editorRoot
 
         BlackMesaEngine.setConsoleVariableAsString(
             "sv_hcad_mle_flare_texture", textureName);
+    }
+
+    function texturePreviewSource(textureName) {
+        var path = textureName === undefined || textureName === null
+                ? "" : textureName.toString().trim();
+
+        if (path.length === 0)
+            return "";
+
+        path = path.replace(/\\/g, "/");
+        while (path.charAt(0) === "/")
+            path = path.substring(1);
+
+        if (path.indexOf("image://game/") === 0)
+            return path;
+
+        if (path.indexOf("materials/") !== 0)
+            path = "materials/" + path;
+
+        if (path.toLowerCase().substring(path.length - 4) !== ".vtf")
+            path += ".vtf";
+
+        return "image://game/" + path;
+    }
+
+    function moveTextCursor(field, direction, event) {
+        var position;
+
+        if (field.selectionStart !== field.selectionEnd) {
+            position = direction < 0
+                    ? Math.min(field.selectionStart, field.selectionEnd)
+                    : Math.max(field.selectionStart, field.selectionEnd);
+        } else {
+            position = field.cursorPosition + direction;
+        }
+
+        position = Math.max(0, Math.min(field.text.length, position));
+        field.deselect();
+        field.cursorPosition = position;
+        event.accepted = true;
     }
 
     // ── Convar helpers ────────────────────────────────────────────────────────  
@@ -616,6 +656,12 @@ Item { id: editorRoot
             property int fh: Math.ceil(24 * Theme.heightScale)  // row height  
             property int fs: Math.ceil(12 * Theme.heightScale)  // font size  
             property int fw: Math.ceil(70 * Theme.widthScale)   // field width  
+            property int rw: Math.ceil(5 * Theme.widthScale)    // row spacing
+            property int colorFieldWidth: Math.max(1, fw * 3
+                - Math.ceil(120 * Theme.widthScale)
+                - Math.ceil(16 * Theme.widthScale)
+                - Math.ceil(14 * Theme.widthScale)
+                - Math.ceil(3 * Theme.widthScale))
             property int aw: Math.ceil(20 * Theme.widthScale)   // arrow width
   
             // ── Flare Index ───────────────────────────────────────────────────  
@@ -634,6 +680,9 @@ Item { id: editorRoot
                     background: Rectangle { color: Theme.colors.modalBackground }  
                     validator: IntValidator { bottom: -2147483648; top: 2147483647 }  
                     selectByMouse: true  
+                    Keys.priority: Keys.BeforeItem
+                    Keys.onLeftPressed: editorRoot.moveTextCursor(indexField, -1, event)
+                    Keys.onRightPressed: editorRoot.moveTextCursor(indexField, 1, event)
 					onAccepted: {  
 						var idx = parseInt(text);  
 						if (isNaN(idx)) return;  
@@ -693,6 +742,9 @@ Item { id: editorRoot
 							font.pixelSize: mainColumn.fs  
 							background: Rectangle { color: Theme.colors.modalBackground }  
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(numField, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(numField, 1, event)
 							onAccepted: editorRoot.setFlareNumber(text)
 						}
 						Rectangle {  
@@ -871,25 +923,36 @@ Item { id: editorRoot
 							spacing: Math.ceil(4 * Theme.heightScale)  
 							anchors.verticalCenter: parent.verticalCenter  
 					  
-							Rectangle {  
-								width:  Math.ceil(50 * Theme.widthScale)  
-								height: Math.ceil(24 * Theme.heightScale)  
-								color: editorRoot.currentColor  
-								border.color: Theme.colors.dimmedText  
-								border.width: 1  
-							}  
+                            Row {
+                                spacing: Math.ceil(3 * Theme.widthScale)
+                                Text {
+                                    width: Math.ceil(14 * Theme.widthScale)
+                                    height: mainColumn.fh
+                                    text: ""
+                                }
+                                Rectangle {
+                                    width: mainColumn.colorFieldWidth
+                                    height: mainColumn.fh
+                                    color: editorRoot.currentColor
+                                    border.color: Theme.colors.dimmedText
+                                    border.width: 1
+                                }
+                            }
 					  
 							Row { spacing: Math.ceil(3 * Theme.widthScale)  
 								Text { text: "R:"; width: Math.ceil(14 * Theme.widthScale); height: mainColumn.fh  
 									   color: Theme.colors.text; font.family: Theme.fonts.regular  
 									   font.pixelSize: mainColumn.fs; verticalAlignment: Text.AlignVCenter }  
 								TextField { id: colorRField  
-									width: mainColumn.fw; height: mainColumn.fh; text: "255"  
+									width: mainColumn.colorFieldWidth; height: mainColumn.fh; text: "255"
 									color: Theme.colors.text; font.family: Theme.fonts.devConsole  
 									font.pixelSize: mainColumn.fs  
 									background: Rectangle { color: Theme.colors.modalBackground }  
 									validator: IntValidator { bottom: 0; top: 255 }  
 									selectByMouse: true  
+									Keys.priority: Keys.BeforeItem
+									Keys.onLeftPressed: editorRoot.moveTextCursor(colorRField, -1, event)
+									Keys.onRightPressed: editorRoot.moveTextCursor(colorRField, 1, event)
 									onTextChanged: editorRoot.applyColor()  
 								}  
 							}  
@@ -899,12 +962,15 @@ Item { id: editorRoot
 									   color: Theme.colors.text; font.family: Theme.fonts.regular  
 									   font.pixelSize: mainColumn.fs; verticalAlignment: Text.AlignVCenter }  
 								TextField { id: colorGField  
-									width: mainColumn.fw; height: mainColumn.fh; text: "255"  
+									width: mainColumn.colorFieldWidth; height: mainColumn.fh; text: "255"
 									color: Theme.colors.text; font.family: Theme.fonts.devConsole  
 									font.pixelSize: mainColumn.fs  
 									background: Rectangle { color: Theme.colors.modalBackground }  
 									validator: IntValidator { bottom: 0; top: 255 }  
 									selectByMouse: true  
+									Keys.priority: Keys.BeforeItem
+									Keys.onLeftPressed: editorRoot.moveTextCursor(colorGField, -1, event)
+									Keys.onRightPressed: editorRoot.moveTextCursor(colorGField, 1, event)
 									onTextChanged: editorRoot.applyColor()  
 								}  
 							}  
@@ -914,12 +980,15 @@ Item { id: editorRoot
 									   color: Theme.colors.text; font.family: Theme.fonts.regular  
 									   font.pixelSize: mainColumn.fs; verticalAlignment: Text.AlignVCenter }  
 								TextField { id: colorBField  
-									width: mainColumn.fw; height: mainColumn.fh; text: "255"  
+									width: mainColumn.colorFieldWidth; height: mainColumn.fh; text: "255"
 									color: Theme.colors.text; font.family: Theme.fonts.devConsole  
 									font.pixelSize: mainColumn.fs  
 									background: Rectangle { color: Theme.colors.modalBackground }  
 									validator: IntValidator { bottom: 0; top: 255 }  
 									selectByMouse: true  
+									Keys.priority: Keys.BeforeItem
+									Keys.onLeftPressed: editorRoot.moveTextCursor(colorBField, -1, event)
+									Keys.onRightPressed: editorRoot.moveTextCursor(colorBField, 1, event)
 									onTextChanged: editorRoot.applyColor()  
 								}  
 							}  
@@ -988,6 +1057,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(param1Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(param1Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applyParams()  
 						}  
@@ -1003,6 +1075,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(param2Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(param2Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "10")  
 							onTextChanged: editorRoot.applyParams()  
 						}  
@@ -1018,6 +1093,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(param3Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(param3Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "10")  
 							onTextChanged: editorRoot.applyParams()  
 						}  
@@ -1033,6 +1111,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(param4Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(param4Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "0")  
 							onTextChanged: editorRoot.applyParams()  
 						}  
@@ -1056,6 +1137,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(size1Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(size1Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applySizes()  
 						}  
@@ -1068,6 +1152,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(size2Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(size2Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applySizes()  
 						}  
@@ -1080,6 +1167,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(size3Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(size3Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applySizes()  
 						}  
@@ -1103,6 +1193,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(int1Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(int1Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applyIntensity()  
 						}  
@@ -1115,6 +1208,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(int2Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(int2Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applyIntensity()  
 						}  
@@ -1127,6 +1223,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(int3Field, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(int3Field, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "1")  
 							onTextChanged: editorRoot.applyIntensity()  
 						}  
@@ -1134,52 +1233,132 @@ Item { id: editorRoot
 		  
                     // ── Texture ───────────────────────────────────────────────────────
                     Row {
-                        spacing: Math.ceil(5 * Theme.widthScale); height: mainColumn.fh
+                        spacing: mainColumn.rw; height: mainColumn.fh
                         Text {
                             width: mainColumn.lw; height: parent.height
                             text: "Texture:"; color: Theme.colors.text
                             font.family: Theme.fonts.regular; font.pixelSize: mainColumn.fs
                             verticalAlignment: Text.AlignVCenter
                         }
-                        TextField { id: textureField
-                            width: mainColumn.fw * 3
-                                   + Math.ceil(10 * Theme.widthScale)
+
+                        // The text field and clear button are flush. Their combined
+                        // right edge matches the DISKH function button.
+                        Row {
+                            spacing: 0
+                            width: mainColumn.fw * 3 + mainColumn.rw * 2
                             height: parent.height
-                            text: "effects/lensflare/spot"; color: Theme.colors.text
-                            font.family: Theme.fonts.devConsole; font.pixelSize: mainColumn.fs
-                            background: Rectangle { color: Theme.colors.modalBackground }
-                            selectByMouse: true
-                            onAccepted: editorRoot.applyTexture(text)
+
+                            TextField {
+                                id: textureField
+                                width: parent.width - clearTextureButton.width
+                                height: parent.height
+                                text: ""; color: Theme.colors.text
+                                font.family: Theme.fonts.devConsole
+                                font.pixelSize: mainColumn.fs
+                                background: Rectangle {
+                                    color: Theme.colors.modalBackground
+                                }
+                                selectByMouse: true
+                                Keys.priority: Keys.BeforeItem
+                                Keys.onLeftPressed: editorRoot.moveTextCursor(textureField, -1, event)
+                                Keys.onRightPressed: editorRoot.moveTextCursor(textureField, 1, event)
+                                onAccepted: editorRoot.applyTexture(text)
+                            }
+
+                            Rectangle {
+                                id: clearTextureButton
+                                width: Math.ceil(26 * Theme.widthScale)
+                                height: parent.height
+                                color: clearTextureMouse.containsMouse
+                                       ? "#e03030" : "#9c2020"
+                                border.color: "#ff5a5a"
+                                border.width: 1
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "X"
+                                    color: "#ffffff"
+                                    font.family: Theme.fonts.bold
+                                    font.pixelSize: mainColumn.fs
+                                }
+                                MouseArea {
+                                    id: clearTextureMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        textureField.text = "";
+                                        editorRoot.applyTexture("");
+                                    }
+                                }
+                            }
                         }
+
                         Rectangle {
-                            width: Math.ceil(70 * Theme.widthScale); height: parent.height
-                            color: browseMouse.containsMouse ? Theme.colors.highlight : Theme.colors.modalBackground
-                            border.color: Theme.colors.dimmedText; border.width: 1
+                            width: mainColumn.fw; height: parent.height
+                            color: browseMouse.containsMouse
+                                   ? Theme.colors.highlight
+                                   : Theme.colors.modalBackground
+                            border.color: Theme.colors.dimmedText
+                            border.width: 1
                             Text {
                                 anchors.centerIn: parent; text: "Browse..."
-                                color: Theme.colors.text; font.family: Theme.fonts.regular
+                                color: Theme.colors.text
+                                font.family: Theme.fonts.regular
                                 font.pixelSize: mainColumn.fs
                             }
-                            MouseArea { id: browseMouse
-                                anchors.fill: parent; hoverEnabled: true
+                            MouseArea {
+                                id: browseMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
                                 onClicked: textureBrowserOverlay.open()
                             }
                         }
+                    }
+
+                    // ── Texture preview ────────────────────────────────────────────────
+                    Row {
+                        spacing: mainColumn.rw
+                        height: Math.ceil(120 * Theme.heightScale)
+
+                        Text {
+                            width: mainColumn.lw; height: parent.height
+                            text: "Texture Preview:"
+                            color: Theme.colors.text
+                            font.family: Theme.fonts.regular
+                            font.pixelSize: mainColumn.fs
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
                         Rectangle {
-                            width: Math.ceil(26 * Theme.widthScale); height: parent.height
-                            color: clearTextureMouse.containsMouse ? "#e03030" : "#9c2020"
-                            border.color: "#ff5a5a"; border.width: 1
-                            Text {
-                                anchors.centerIn: parent; text: "X"
-                                color: "#ffffff"; font.family: Theme.fonts.bold
-                                font.pixelSize: mainColumn.fs
+                            id: texturePreviewPanel
+                            width: Math.ceil(120 * Theme.widthScale)
+                            height: Math.ceil(120 * Theme.heightScale)
+                            color: Theme.colors.modalBackground
+                            border.color: Theme.colors.dimmedText
+                            border.width: 1
+
+                            Image {
+                                id: texturePreviewImage
+                                anchors.fill: parent
+                                anchors.margins: Math.ceil(2 * Theme.widthScale)
+                                source: editorRoot.texturePreviewSource(textureField.text)
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                cache: false
                             }
-                            MouseArea { id: clearTextureMouse
-                                anchors.fill: parent; hoverEnabled: true
-                                onClicked: {
-                                    textureField.text = "";
-                                    editorRoot.applyTexture("");
-                                }
+
+                            Text {
+                                anchors.fill: parent
+                                anchors.margins: Math.ceil(5 * Theme.widthScale)
+                                visible: textureField.text.trim().length === 0
+                                         || texturePreviewImage.status === Image.Error
+                                text: textureField.text.trim().length === 0
+                                      ? "NO TEXTURE" : "PREVIEW UNAVAILABLE"
+                                color: Theme.colors.dimmedText
+                                font.family: Theme.fonts.regular
+                                font.pixelSize: Math.ceil(9 * Theme.heightScale)
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                wrapMode: Text.WordWrap
                             }
                         }
                     }
@@ -1241,6 +1420,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(attenuationField, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(attenuationField, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "0")  
 							onTextChanged: {  
 								if (!editorRoot.isLoading)  
@@ -1386,6 +1568,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
 							selectByMouse: true  
+							Keys.priority: Keys.BeforeItem
+							Keys.onLeftPressed: editorRoot.moveTextCursor(gpzField, -1, event)
+							Keys.onRightPressed: editorRoot.moveTextCursor(gpzField, 1, event)
 							onEditingFinished: text = editorRoot.compactFloatText(text, "2")  
 							onTextChanged: {  
 								if (!editorRoot.isLoading)  
@@ -1416,6 +1601,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
                             selectByMouse: true
+                            Keys.priority: Keys.BeforeItem
+                            Keys.onLeftPressed: editorRoot.moveTextCursor(ang1Field, -1, event)
+                            Keys.onRightPressed: editorRoot.moveTextCursor(ang1Field, 1, event)
                             onEditingFinished: text = editorRoot.compactFloatText(text, "0")
                             onTextChanged: editorRoot.applyAngles()
                         }
@@ -1430,6 +1618,9 @@ Item { id: editorRoot
                                 notation: DoubleValidator.StandardNotation
                             }
                             selectByMouse: true
+                            Keys.priority: Keys.BeforeItem
+                            Keys.onLeftPressed: editorRoot.moveTextCursor(ang3Field, -1, event)
+                            Keys.onRightPressed: editorRoot.moveTextCursor(ang3Field, 1, event)
                             onEditingFinished: text = editorRoot.compactFloatText(text, "0")
                             onTextChanged: editorRoot.applyAngles()
                         }
@@ -1446,7 +1637,7 @@ Item { id: editorRoot
                                 id: rotationGizmo
                                 anchors.left: parent.left
                                 anchors.bottom: parent.bottom
-                                width: Math.ceil(140 * Theme.widthScale)
+                                width: mainColumn.fw * 2 + mainColumn.rw
                                 height: mainColumn.fh * 5 + mainColumn.spacing * 4
                                 enabled: editorRoot.flareType === 1
                                 opacity: enabled ? 1.0 : 0.3
