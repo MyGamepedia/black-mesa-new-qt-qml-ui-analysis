@@ -96,6 +96,116 @@ Item { id: editorRoot
 		}  
 	}
 		
+    function resetEditorData() {
+        // Do not let delayed reads restore values from the level being unloaded.
+        copyTimer.stop();
+        populateTimer.stop();
+        flareUpdateTimer.stop();
+        flareIndexSyncTimer.stop();
+
+        styleCombo.popup.close();
+        textureBrowserOverlay.visible = false;
+        textureModel.clear();
+        flaresModel.clear();
+
+        isLoading = true;
+
+        functionIndex = 0;
+        flareType = 0;
+        currentColor = Qt.rgba(1, 1, 1, 1);
+        hue = 0.0;
+        saturation = 0.0;
+        hsv_value = 1.0;
+        _updatingColor = false;
+        currentStyle = 0;
+        currentAngleZ = "0";
+        ownedUI = false;
+        _savedShowExtras = false;
+        flareIndex = -1;
+        flareUpdateCount = 0;
+        flaresReady = false;
+
+        flareClipboardValid = false;
+        flareClipboardFunction = "";
+        flareClipboardParams = "";
+        flareClipboardSizes = "";
+        flareClipboardIntensity = "";
+        flareClipboardColor = "";
+        flareClipboardTexture = "";
+
+        indexField.text = "-1";
+        numField.text = "1";
+        colorRField.text = "255";
+        colorGField.text = "255";
+        colorBField.text = "255";
+        param1Field.text = "1.0";
+        param2Field.text = "10";
+        param3Field.text = "10";
+        param4Field.text = "0";
+        size1Field.text = "1.0";
+        size2Field.text = "1.0";
+        size3Field.text = "1.0";
+        int1Field.text = "1.0";
+        int2Field.text = "1.0";
+        int3Field.text = "1.0";
+        textureField.text = "";
+        attenuationField.text = "0";
+        gpzField.text = "2.0";
+        ang1Field.text = "0";
+        ang3Field.text = "0";
+
+        var fields = [
+            indexField, numField,
+            colorRField, colorGField, colorBField,
+            param1Field, param2Field, param3Field, param4Field,
+            size1Field, size2Field, size3Field,
+            int1Field, int2Field, int3Field,
+            textureField, attenuationField, gpzField,
+            ang1Field, ang3Field
+        ];
+        for (var i = 0; i < fields.length; i++) {
+            fields[i].deselect();
+            fields[i].cursorPosition = fields[i].text.length;
+        }
+
+        rotationGizmo.dragRing = -1;
+        rotationGizmo.dragLastPointerAngle = 0.0;
+        rotationGizmo.dragAccumulatedDelta = 0.0;
+        rotationGizmo.dragStartValue = 0.0;
+
+        contentArea.contentX = 0;
+        contentArea.contentY = 0;
+        styleList.contentY = 0;
+        styleList.currentIndex = -1;
+        textureGrid.contentX = 0;
+        textureGrid.contentY = 0;
+        textureGrid.currentIndex = -1;
+
+        isLoading = false;
+        axisCanvas.requestPaint();
+    }
+
+    function prepareForLevelLoad() {
+        // Closing first restores input ownership and the normal wallpaper state.
+        if (state !== "closed" || ownedUI)
+            hide();
+
+        if (!componentReady)
+            return;
+
+        BlackMesaUtils.disableUINavigation = false;
+        resetEditorData();
+    }
+
+    Connections {
+        target: BlackMesaEngine
+        ignoreUnknownSignals: true
+
+        onLevelLoadingStarted: {
+            editorRoot.prepareForLevelLoad();
+        }
+    }
+
 	Component.onCompleted: {  
 		componentReady = true;  
 	}
