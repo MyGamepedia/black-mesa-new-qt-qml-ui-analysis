@@ -20,6 +20,7 @@ QtObject {
             map['+use'] = labels.use;
             map['+attack'] = labels.primary;
             map['+attack2'] = labels.secondary;
+			map['+attack3'] = labels.thirdattack;
             map['+reload'] = labels.reload;
             map['impulse 100'] = labels.flashlight;
             map['+zoom'] = labels.zoom;
@@ -32,6 +33,7 @@ QtObject {
             map['slot4'] = labels.weaponCategory4;
             map['slot5'] = labels.weaponCategory5;
             map['slot6'] = labels.weaponCategory6;
+			map['slot7'] = labels.weaponCategory7;
 
             map['save quick'] = labels.quickSave;
             map['load quick'] = labels.quickLoad;
@@ -47,11 +49,17 @@ QtObject {
             //map['chooseteam'] = labels.chooseTeam;
             //map['+voicerecord'] = labels.voiceChat;
 
+			map['use weapon_knife'] = labels.weaponKnife;
+			map['use weapon_wrench'] = labels.weaponWrench;
             map['use weapon_crowbar'] = labels.weaponCrowbar;
+			map['use weapon_beretta'] = labels.weaponBeretta;
             map['use weapon_glock'] = labels.weaponPistol;
             map['use weapon_357'] = labels.weapon357;
+			map['use weapon_eagle'] = labels.weaponEagle;
             map['use weapon_mp5'] = labels.weaponMP5;
-            map['use weapon_shotgun'] = labels.weaponShotgun;
+			map['use weapon_m4'] = labels.weaponM4;
+            map['use weapon_shotgun'] = labels.weaponM500;
+			map['use weapon_spas12'] = labels.weaponShotgun;
             map['use weapon_crossbow'] = labels.weaponCrossbow;
             map['use weapon_rpg'] = labels.weaponRPG;
             //map['use weapon_tau'] = labels.weaponTau;

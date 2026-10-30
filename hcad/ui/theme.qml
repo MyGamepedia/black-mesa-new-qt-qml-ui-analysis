@@ -75,8 +75,8 @@ QtObject {
 		
 		//mygamepedia: i replaced orig tracks after i watched Guillermo del Toro's Pinocchio when i was working on the ui,
 		//and man, this music as sad as the movie (recommend to watch)
-        readonly property string music1: "#music/Scott_Buckley/MemoriesOfStone.wav"
-        readonly property string music2: "#music/Scott_Buckley/MemoriesOfStone.wav"
+        readonly property string music1: "#ui/gamestartup_1.wav"
+        readonly property string music2: "#ui/gamestartup_2.wav"
     }
 
     readonly property QtObject fonts: QtObject {

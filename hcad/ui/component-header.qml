@@ -21,7 +21,7 @@ Item { id: header
     function checkButtonsActive() {
         if (!hide) {
             //show the "Load Game" menu button when there are saved games to load and if game is not multiplayer mode
-            campaignNavModel.get(1).isEnabled = !!BlackMesaUtils.getSaveGames().length && !appRoot.isInMultiplayerMode;
+            campaignNavModel.get(1).isEnabled = !appRoot.isInMultiplayerMode && !!(BlackMesaEngine.listSaveEntries() || []).length;
             // show the "Save Game" menu button when in game and if game is not multiplayer mode
             campaignNavModel.get(2).isEnabled = isInGame && !appRoot.isInMultiplayerMode;
         }

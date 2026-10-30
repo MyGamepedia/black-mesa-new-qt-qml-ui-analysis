@@ -3,11 +3,17 @@ import CrowbarCollective 1.0
 
 BindingList {
     commands: [
+		InputBindingsManager.getBindingComponentConfig('use weapon_knife'),
+		InputBindingsManager.getBindingComponentConfig('use weapon_wrench'),
         InputBindingsManager.getBindingComponentConfig('use weapon_crowbar'),
+		InputBindingsManager.getBindingComponentConfig('use weapon_beretta'),
         InputBindingsManager.getBindingComponentConfig('use weapon_glock'),
         InputBindingsManager.getBindingComponentConfig('use weapon_357'),
+		InputBindingsManager.getBindingComponentConfig('use weapon_eagle'),
         InputBindingsManager.getBindingComponentConfig('use weapon_mp5'),
+		InputBindingsManager.getBindingComponentConfig('use weapon_m4'),
         InputBindingsManager.getBindingComponentConfig('use weapon_shotgun'),
+		InputBindingsManager.getBindingComponentConfig('use weapon_spas12'),
         InputBindingsManager.getBindingComponentConfig('use weapon_crossbow'),
         InputBindingsManager.getBindingComponentConfig('use weapon_rpg'),
         //InputBindingsManager.getBindingComponentConfig('use weapon_tau'),

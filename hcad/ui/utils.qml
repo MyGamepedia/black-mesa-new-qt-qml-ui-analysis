@@ -28,27 +28,21 @@ QtObject {
     // ----------------------------
     property var savedGameNameRegex: /^(autosave|quick)\d*$/;
 	
-	//mygamepedia: attempts to display map name (chaptername A/B/etc)
-	function getChapterTitleFromMapName(mapName) {  
-		var campaigns = BlackMesaEngine.listCampaignEntries() || [];  
-		for (var i = 0; i < campaigns.length; i++) {  
-			var chapters = campaigns[i].chapters || [];  
-			for (var j = 0; j < chapters.length; j++) {  
-				if (chapters[j].levelName === mapName) {  
-					// Use #levelName key (e.g. #hc_t0a0), not the JSON title key  
-					return BlackMesaEngine.getLocalizedString('#' + chapters[j].levelName);  
-				}  
-			}  
-		}  
-		// Fallback for maps not in campaign JSON  
-		var fallbackKey = mapName.replace("#bms_", "#QTUI_Maps_");  
-		if (fallbackKey.charAt(0) !== '#') {  
-			fallbackKey = '#' + fallbackKey;  
-		}  
-		return BlackMesaEngine.getLocalizedString(fallbackKey);  
-	}
-	
+    // Map names already identify their localization keys; no campaign scan is needed.
+    function getChapterTitleFromMapName(mapName) {
+        if (!mapName) {
+            return "";
+        }
+
+        var key = mapName.replace(/^#bms_/i, "#QTUI_Maps_");
+        if (key.charAt(0) !== "#") {
+            key = "#" + key;
+        }
+        return BlackMesaEngine.getLocalizedString(key);
+    }
+
     function getSaveGames() {
+        var chapterNames = Object.create(null);
         var data = (BlackMesaEngine.listSaveEntries() || []).sort(function (a, b) {
                 return new Date(b.dateCreated) - new Date(a.dateCreated);
             }).map(function (save) {
@@ -59,10 +53,14 @@ QtObject {
                     type = match[1];
                 }
 
+                if (chapterNames[save.chapter] === undefined) {
+                    chapterNames[save.chapter] = getChapterTitleFromMapName(save.chapter);
+                }
+
                 return {
                     savename: save.name,
                     chapter: Number((save.chapter.match(/Chapter(\d+)?/m) || [])[1] || "-1"),
-                    chapterName: getChapterTitleFromMapName(save.chapter),
+                    chapterName: chapterNames[save.chapter],
                     type: type,
                     dateCreated: new Date(save.dateCreated),
                     thumbnail: save.thumbnailUrl

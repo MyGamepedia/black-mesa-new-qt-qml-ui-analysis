@@ -12,6 +12,8 @@ Rectangle { id: optionsView
 
     // if TRUE the page is reloaded after user click on "Apply Changes" button
     property bool reloadPageAfterApplyChanges: false
+    // Optional page-specific confirmation before applying settings.
+    property var beforeApplyChanges: null
 
     property int visibleRows: 3
     property bool batchUpdates: false
@@ -272,16 +274,13 @@ Rectangle { id: optionsView
                 disabled: !hasPendingChanges
                 text: L10n.strings.buttons.applyChanges
                 onClicked: {
-					if (hdPackPendingChange && !BlackMesaUtils.hdPackRestartWarningShown) {  
-						BlackMesaUtils.hdPackRestartWarningShown = true;  
-						hdPackRestartAlert.show();  
-					} else {  
-						videoOptions.flushPendingChanges();  
-						BlackMesaEngine.executeClientCommandUnrestricted("savereloadaftersettingschange");  
-					}
+                    if (beforeApplyChanges && beforeApplyChanges() === false) {
+                        return;
+                    }
+                    optionsView.flushPendingChanges();
                     if ( reloadPageAfterApplyChanges ) { // if reload page is needed ...
                         router.setRoute(router.currentRoute.name.toString(), false, true);
-                        reloadPageAfterApplyChanges = true;
+                        reloadPageAfterApplyChanges = false;
                     }
                 }
             }

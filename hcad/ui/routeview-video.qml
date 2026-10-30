@@ -27,10 +27,11 @@ RouteView { id: videoOptionsView
         'video_waterDetail',
         'video_csmQuality',
         'video_csmMemory',
-        'video_dynamicShadowQuality',
         'video_dynamicShadowMemory',
+        'video_dynamicShadowQuality',
         'video_dynamicShadowSoftness',
         'video_dynamicLightsQuality',
+        'video_lightQualityInReflections',
         'video_godRays',
         'video_lensFlare',
         'video_chromaticAberration',
@@ -43,6 +44,15 @@ RouteView { id: videoOptionsView
         title: L10n.strings.headers.videoOptions
         batchUpdates: true
         visibleRows: 8
+
+        beforeApplyChanges: function () {
+            if (hdPackPendingChange && !BlackMesaUtils.hdPackRestartWarningShown) {
+                BlackMesaUtils.hdPackRestartWarningShown = true;
+                hdPackRestartAlert.show();
+                return false;
+            }
+            return true;
+        }
 
         anchors.centerIn: parent
         anchors.verticalCenterOffset: Math.ceil(20 * Theme.heightScale)
@@ -82,10 +92,11 @@ RouteView { id: videoOptionsView
                     video_waterDetail: "simple",
                     video_csmQuality: "0", // Disabled
                     video_csmMemory: "0", // Low
-                    video_dynamicShadowQuality: "0", // OFF
-                    video_dynamicShadowMemory: "3", // Potato
+                    video_dynamicShadowMemory: "0", // OFF
+                    video_dynamicShadowQuality: "3", // Potato
                     video_dynamicShadowSoftness: "0", // Low
-                    video_dynamicLightsQuality: "0", // Potato
+                    video_dynamicLightsQuality: "1", // Potato
+                    video_lightQualityInReflections: "0", // Potato
                     video_godRays: "0",
                     video_lensFlare: "0",
                     video_chromaticAberration: "0",
@@ -102,10 +113,11 @@ RouteView { id: videoOptionsView
                     video_waterDetail: "simple",
                     video_csmQuality: "1", // Low
                     video_csmMemory: "0", // Medium
-                    video_dynamicShadowQuality: "2", // Low
                     video_dynamicShadowMemory: "2", // Low
+                    video_dynamicShadowQuality: "2", // Low
                     video_dynamicShadowSoftness: "0", // Low
-                    video_dynamicLightsQuality: "1", // Low
+                    video_dynamicLightsQuality: "2", // Low
+                    video_lightQualityInReflections: "2", // Low
                     video_godRays: "0",
                     video_lensFlare: "0",
                     video_chromaticAberration: "0",
@@ -122,10 +134,11 @@ RouteView { id: videoOptionsView
                     video_waterDetail: "world",
                     video_csmQuality: "1", // Medium
                     video_csmMemory: "1", // High
-                    video_dynamicShadowQuality: "3", // Medium
-                    video_dynamicShadowMemory: "1", // Medium
+                    video_dynamicShadowMemory: "3", // Medium
+                    video_dynamicShadowQuality: "1", // Medium
                     video_dynamicShadowSoftness: "1", // Medium
-                    video_dynamicLightsQuality: "2", // Medium
+                    video_dynamicLightsQuality: "3", // Medium
+                    video_lightQualityInReflections: "3", // Medium
                     video_godRays: "1",
                     video_lensFlare: "0",
                     video_chromaticAberration: "0",
@@ -142,10 +155,11 @@ RouteView { id: videoOptionsView
                     video_waterDetail: "all",
                     video_csmQuality: "2", // Medium
                     video_csmMemory: "2", // High
-                    video_dynamicShadowQuality: "4", // High
-                    video_dynamicShadowMemory: "0", // High
+                    video_dynamicShadowMemory: "4", // High
+                    video_dynamicShadowQuality: "0", // High
                     video_dynamicShadowSoftness: "2", // High
-                    video_dynamicLightsQuality: "3", // High
+                    video_dynamicLightsQuality: "4", // High
+                    video_lightQualityInReflections: "4", // High
                     video_godRays: "2",
                     video_lensFlare: "1",
                     video_chromaticAberration: "1",
@@ -162,10 +176,11 @@ RouteView { id: videoOptionsView
                     video_waterDetail: "all",
                     video_csmQuality: "3", // Medium
                     video_csmMemory: "2", // High
-                    video_dynamicShadowQuality: "4", // High
-                    video_dynamicShadowMemory: "0", // High
+                    video_dynamicShadowMemory: "4", // High
+                    video_dynamicShadowQuality: "0", // High
                     video_dynamicShadowSoftness: "2", // High
-                    video_dynamicLightsQuality: "4", // High
+                    video_dynamicLightsQuality: "5", // Ultra
+                    video_lightQualityInReflections: "5", // Ultra
                     video_godRays: "2",
                     video_lensFlare: "1",
                     video_chromaticAberration: "1",
@@ -192,7 +207,9 @@ RouteView { id: videoOptionsView
             if (model.key === models.video_quality.key) {
                 setValue(models.video_quality, model.value);
                 setAdvancedSettingsState(qualitySettings[models.video_quality.value]);
-            } else if (model.key in qualitySettings[0]) {
+            } else if (model.key in qualitySettings[0] ||
+                       model.key === "video_fireLights" ||
+                       model.key === "video_lightTransitionQuality") {
                 // set overall quality to 'custom', because one of the dependency settings was
                 // just manually set
                 setValue(models.video_quality, '5');
@@ -275,46 +292,25 @@ RouteView { id: videoOptionsView
             }
 
 
-            function video_dynamicShadowQuality(value) {
-                var active, quality, maxpass,
-                    unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported");
-                var unlockedPotato = true; //BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_potato");
+            function video_dynamicShadowMemory(value) {
+                var unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported"),
+                    setting = Math.max(0, Math.min(unlocked ? 5 : 4, Number(value))),
+                    passes = [0, 10, 12, 16, 24, 60],
+                    quality = Math.min(setting, 4);
 
-                // maximum for customer version :  4:High
-                if (!unlocked && Number(value) > 4) {
-                    value = "4";
-                }
-
-                // can't set potato if not enabled
-                if (!unlockedPotato && Number(value) === 1) {
-                    value = "2"; // 2=Low
-                }
-
-                switch (value) {
-                    case "0": active = 0; quality = 0; maxpass = 0;  break; // OFF
-                    case "1": active = 666; quality = 1; maxpass = 10;  break; // Potato
-                    case "2": active = 666; quality = 2; maxpass = 12;  break; // Low
-                    case "3": active = 666; quality = 3; maxpass = 16;  break; // Medium
-                    case "4": active = 666; quality = 4; maxpass = 24;  break; // High
-                    default: console.warn("setComplex unknown dynamicShadowQuality value:", value);
-                }
-
-                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_active", active);
+                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_active", setting === 0 ? 0 : 666);
                 BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_quality", quality);
-                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_max_passes_per_frame", maxpass);
-
+                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_max_passes_per_frame", passes[setting]);
             }
 
 
-            function video_dynamicShadowMemory(value) {
-                var unlockedPotato = true; //BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_potato");
-                var quality = Number(value);
+            function video_dynamicShadowQuality(value) {
+                var unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported"),
+                    ultra = value === "ultra" && unlocked,
+                    resolution = value === "ultra" ? 0 : Math.max(0, Math.min(3, Number(value)));
 
-                if (!unlockedPotato && quality === 3) {
-                    quality = "2"; // 2=Low
-                }
-
-                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_res", quality);
+                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_res", resolution);
+                BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_res_dkvk", ultra ? 1 : 0);
             }
 
             function video_dynamicShadowSoftness(value) {
@@ -337,13 +333,7 @@ RouteView { id: videoOptionsView
                     temporaryMinimalModeOverride,
                     temporaryFastNormalsOverride;
 
-                if (!unlocked && Number(value) > 4) {
-                    value = "4";
-                }
-
-                if (!unlockedPotato && Number(value) === 0) {
-                    value = "1"; // 1=Low
-                }
+                value = Math.max(1, Math.min(unlocked ? 6 : 5, Number(value)));
 
                 BlackMesaEngine.setConsoleVariableAsInt("nr_lights_quality", value);
 
@@ -374,6 +364,17 @@ RouteView { id: videoOptionsView
 
 
 
+
+            function video_lightQualityInReflections(value) {
+                var unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported"),
+                    quality = Math.max(0, Math.min(unlocked ? 6 : 5, Number(value)));
+
+                if (quality === 1) {
+                    quality = 0;
+                }
+                BlackMesaEngine.setConsoleVariableAsInt("nr_gbuffer_for_secondary_cams_quality", quality);
+                BlackMesaEngine.setConsoleVariableAsInt("nr_gbuffer_for_refraction_enabled", quality === 0 ? 0 : 1);
+            }
 
             function video_godRays(value) {
                 if ( value === "0" ) {
@@ -495,60 +496,47 @@ RouteView { id: videoOptionsView
             // Warranty void if console opened.
             function video_dynamicLightsQuality() {
                 var quality = BlackMesaEngine.getConsoleVariableAsInt("nr_lights_quality"),
+                    unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported"),
+                    supported = Math.max(1, Math.min(unlocked ? 6 : 5, quality));
+
+                if (quality !== supported) {
+                    videoOptions.setComplex.video_dynamicLightsQuality(supported.toString());
+                }
+                return supported.toString();
+            }
+
+            function video_dynamicShadowMemory() {
+                var enabled = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_active") === 666,
+                    quality = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_quality"),
+                    passes = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_max_passes_per_frame"),
                     unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported");
-                var unlockedPotato = true; //BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_potato");
 
-                // settings above "VeryHigh" are only allowed if unlocked
-                if (!unlocked && quality > 4) {
-                    quality = 4;
-                    BlackMesaEngine.setConsoleVariableAsInt("nr_lights_quality", quality);
+                if (!enabled) {
+                    return "0";
                 }
-
-                // settings Potato is only allowed if unlocked potato.
-                if (!unlockedPotato && quality === 0) {
-                    quality = 1;
-                    BlackMesaEngine.setConsoleVariableAsInt("nr_lights_quality", quality);
+                if (quality >= 4 && passes >= 60 && unlocked) {
+                    return "5";
                 }
-
+                quality = Math.max(1, Math.min(4, quality));
+                if (!unlocked && passes >= 60) {
+                    videoOptions.setComplex.video_dynamicShadowMemory(quality.toString());
+                }
                 return quality.toString();
             }
 
             function video_dynamicShadowQuality() {
-                var quality = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_quality"),
-                    enabled = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_active") === 666,
+                var resolution = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_res"),
+                    ultra = BlackMesaEngine.getConsoleVariableAsBoolean("nr_shadow_res_dkvk"),
                     unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported");
-                var unlockedPotato = true; //BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_potato");
 
-                if (!enabled) {
-                    return "0";
-                // settings above "High" are only allowed if unlocked
+                if (ultra && unlocked) {
+                    return "ultra";
                 }
-
-                if (!unlocked && quality > 4) {
-                    quality = 4;
-                    BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_quality", quality);
+                if (ultra) {
+                    BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_res_dkvk", 0);
                 }
-
-                // settings Potato is only allowed if unlocked potato.
-                if (!unlockedPotato && quality === 1) {
-                    quality = 2; // 2=Low
-                    BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_quality", quality);
-                }
-
-                return quality.toString();
-            }
-
-            function video_dynamicShadowMemory() {
-                var quality = BlackMesaEngine.getConsoleVariableAsInt("nr_shadow_res");
-                var unlockedPotato = true; //BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_potato");
-
-                // settings Potato is only allowed if unlocked potato.
-                if (!unlockedPotato && quality === 3) {
-                    quality = 2; // 2=Low
-                    BlackMesaEngine.setConsoleVariableAsInt("nr_shadow_res", quality);
-                }
-
-                return quality.toString();
+                resolution = Math.max(0, Math.min(3, resolution));
+                return resolution.toString();
             }
 
             function video_dynamicShadowSoftness() {
@@ -586,6 +574,20 @@ RouteView { id: videoOptionsView
                 return quality.toString();
             }
 
+
+            function video_lightQualityInReflections() {
+                var quality = BlackMesaEngine.getConsoleVariableAsInt("nr_gbuffer_for_secondary_cams_quality"),
+                    unlocked = BlackMesaEngine.getConsoleVariableAsBoolean("mat_unlock_gfx_highend_unsupported"),
+                    supported = Math.max(0, Math.min(unlocked ? 6 : 5, quality));
+
+                if (supported === 1) {
+                    supported = 0;
+                }
+                if (quality !== supported) {
+                    videoOptions.setComplex.video_lightQualityInReflections(supported.toString());
+                }
+                return supported.toString();
+            }
 
             function video_godRays() {
                 var gr_quality = BlackMesaEngine.getConsoleVariableAsInt("np_gr_quality");
@@ -966,17 +968,17 @@ RouteView { id: videoOptionsView
                 });
 
 
-                // Dynamic Shadow Quality
-                var shadowOptions = [];
-                shadowOptions.push({ label: values.off, value: "0" });
-                if ( unlockedPotato ) {
-                    shadowOptions.push({ label: values.qualityPotato, value: "1" });
+                // Dynamic Shadow Quality: resolution and the optional Ultra path.
+                var shadowOptions = [
+                    { label: values.qualityPotato, value: "3" },
+                    { label: values.qualityLow, value: "2" },
+                    { label: values.qualityMedium, value: "1" },
+                    { label: values.qualityHigh, value: "0" }
+                ];
+                if (unlocked) {
+                    shadowOptions.push({ label: values.qualityUltra, value: "ultra", warning: 1 });
                 }
-                shadowOptions.push({ label: values.qualityLow, value: "2" });
-                shadowOptions.push({ label: values.qualityMedium, value: "3" });
-                shadowOptions.push({ label: values.qualityHigh, value: "4" });
                 append({
-                    //disabled: false,
                     label: labels.video_dynamicShadowQuality,
                     type: "select",
                     valueType: "string",
@@ -984,22 +986,23 @@ RouteView { id: videoOptionsView
                     key: "video_dynamicShadowQuality",
                     options: shadowOptions,
                     description_main: labels.video_desc_help_DYNAMICSHADOWSQUALITY,
-                    usage_cpu: labels.video_desc_usage_major,
-                    usage_gpu: labels.video_desc_usage_moderate,
+                    usage_cpu: labels.video_desc_usage_none,
+                    usage_gpu: labels.video_desc_usage_minor,
                     usage_ram: labels.video_desc_usage_major
                 });
 
-
-                // Dynamic Shadow Memory
-                var shadowOptionsMemory = [];
-                if ( unlockedPotato ) {
-                    shadowOptionsMemory.push({ label: values.qualityPotato, value: "3" });
+                // Dynamic Shadow Memory: passes per frame.
+                var shadowOptionsMemory = [
+                    { label: values.off, value: "0" },
+                    { label: values.qualityPotato, value: "1" },
+                    { label: values.qualityLow, value: "2" },
+                    { label: values.qualityMedium, value: "3" },
+                    { label: values.qualityHigh, value: "4" }
+                ];
+                if (unlocked) {
+                    shadowOptionsMemory.push({ label: values.qualityUltra, value: "5", warning: 1 });
                 }
-                shadowOptionsMemory.push({ label: values.qualityLow, value: "2" });
-                shadowOptionsMemory.push({ label: values.qualityMedium, value: "1" });
-                shadowOptionsMemory.push({ label: values.qualityHigh, value: "0" });
                 append({
-                    //disabled: false,
                     label: labels.video_dynamicShadowMemory,
                     type: "select",
                     valueType: "string",
@@ -1007,8 +1010,8 @@ RouteView { id: videoOptionsView
                     key: "video_dynamicShadowMemory",
                     options: shadowOptionsMemory,
                     description_main: labels.video_desc_help_DYNAMICSHADOWSMEMORY,
-                    usage_cpu: labels.video_desc_usage_none,
-                    usage_gpu: labels.video_desc_usage_minor,
+                    usage_cpu: labels.video_desc_usage_major,
+                    usage_gpu: labels.video_desc_usage_moderate,
                     usage_ram: labels.video_desc_usage_major
                 });
 
@@ -1033,18 +1036,16 @@ RouteView { id: videoOptionsView
 
 
 
-                // Dynamic Lights Quality
-                var lightsOptions = [];
-                if ( unlockedPotato ) {
-                    lightsOptions.push({ label: values.qualityPotato, value: "0" });
-                }
-                lightsOptions.push({ label: values.qualityLow, value: "1" });
-                lightsOptions.push({ label: values.qualityMedium, value: "2" });
-                lightsOptions.push({ label: values.qualityHigh, value: "3" });
-                lightsOptions.push({ label: values.qualityUltra, value: "4", warning: 1 });
+                // Dynamic Lights Quality: the former Low level is now Potato.
+                var lightsOptions = [
+                    { label: values.qualityPotato, value: "1" },
+                    { label: values.qualityLow, value: "2" },
+                    { label: values.qualityMedium, value: "3" },
+                    { label: values.qualityHigh, value: "4" },
+                    { label: values.qualityUltra, value: "5", warning: 1 }
+                ];
                 if (unlocked) {
-                    lightsOptions.push({ label: values.qualityInsane, value: "5", warning: 1 });
-                    //lightsOptions.push({ label: values.qualityInsane2, value: "6", warning: 1 }); // USED ONLY FOR DEBUG!
+                    lightsOptions.push({ label: values.qualityInsane, value: "6", warning: 1 });
                 }
                 append({
                     //disabled: false,
@@ -1055,6 +1056,30 @@ RouteView { id: videoOptionsView
                     key: "video_dynamicLightsQuality",
                     options: lightsOptions,
                     description_main: labels.video_desc_help_DYNAMICLIGHTSQUALITY,
+                    usage_cpu: labels.video_desc_usage_major,
+                    usage_gpu: labels.video_desc_usage_major,
+                    usage_ram: labels.video_desc_usage_major
+                });
+
+                // Light Quality in Reflections follows the same levels.
+                var reflectionOptions = [
+                    { label: values.qualityPotato, value: "0" },
+                    { label: values.qualityLow, value: "2" },
+                    { label: values.qualityMedium, value: "3" },
+                    { label: values.qualityHigh, value: "4" },
+                    { label: values.qualityUltra, value: "5", warning: 1 }
+                ];
+                if (unlocked) {
+                    reflectionOptions.push({ label: values.qualityInsane, value: "6", warning: 1 });
+                }
+                append({
+                    label: labels.video_lightQualityInReflections,
+                    type: "select",
+                    valueType: "string",
+                    value: "",
+                    key: "video_lightQualityInReflections",
+                    options: reflectionOptions,
+                    description_main: labels.video_desc_help_LightQualityInReflections,
                     usage_cpu: labels.video_desc_usage_major,
                     usage_gpu: labels.video_desc_usage_major,
                     usage_ram: labels.video_desc_usage_major
@@ -1073,6 +1098,38 @@ RouteView { id: videoOptionsView
                         { label: values.qualityLow, value: "1" },
                         { label: values.qualityHigh, value: "2" }
                     ]
+                });
+
+                // Fire Lights
+                append({
+                    label: labels.video_fireLights,
+                    type: "select",
+                    valueType: "int",
+                    value: "",
+                    key: "video_fireLights",
+                    cvar: "sv_ignite_light_mode",
+                    options: [
+                        { label: values.off, value: "0" },
+                        { label: values.qualityLow, value: "2" },
+                        { label: values.qualityHigh, value: "3" }
+                    ],
+                    description_main: labels.video_desc_help_FIRELIGHTS
+                });
+
+                // Light Transition Quality
+                append({
+                    label: labels.video_lightTransitionQuality,
+                    type: "select",
+                    valueType: "int",
+                    value: "",
+                    key: "video_lightTransitionQuality",
+                    cvar: "nr_light_settings_transition_exp",
+                    options: [
+                        { label: values.off, value: "0" },
+                        { label: values.qualityLow, value: "1" },
+                        { label: values.qualityHigh, value: "2" }
+                    ],
+                    description_main: labels.video_desc_help_LightTransitionQuality
                 });
 
                 // Gamma ( Brightness )

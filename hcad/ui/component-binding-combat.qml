@@ -6,6 +6,7 @@ BindingList {
         InputBindingsManager.getBindingComponentConfig('+use'),
         InputBindingsManager.getBindingComponentConfig('+attack'),
         InputBindingsManager.getBindingComponentConfig('+attack2'),
+		InputBindingsManager.getBindingComponentConfig('+attack3'),
         InputBindingsManager.getBindingComponentConfig('+reload'),
         InputBindingsManager.getBindingComponentConfig('impulse 100'),
         InputBindingsManager.getBindingComponentConfig('+zoom'),
@@ -17,6 +18,7 @@ BindingList {
         InputBindingsManager.getBindingComponentConfig('slot3'),
         InputBindingsManager.getBindingComponentConfig('slot4'),
         InputBindingsManager.getBindingComponentConfig('slot5'),
-        InputBindingsManager.getBindingComponentConfig('slot6')
+        InputBindingsManager.getBindingComponentConfig('slot6'),
+		InputBindingsManager.getBindingComponentConfig('slot7')
     ]
 }
